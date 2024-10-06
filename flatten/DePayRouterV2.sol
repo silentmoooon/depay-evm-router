@@ -756,14 +756,14 @@ interface IPermit2 {
 }
 
 
-// Dependency file: contracts/interfaces/IDePayRouterV2.sol
+// Dependency file: contracts/interfaces/IUnusPayRouterV2.sol
 
 
 // pragma solidity 0.8.18;
 
 // import 'contracts/interfaces/IPermit2.sol';
 
-interface IDePayRouterV2 {
+interface IUnusPayRouterV2 {
 
   struct Payment {
     uint256 amountIn;
@@ -792,12 +792,12 @@ interface IDePayRouterV2 {
   ) external payable returns(bool);
 
   function pay(
-    IDePayRouterV2.Payment calldata payment,
+    IUnusPayRouterV2.Payment calldata payment,
     PermitTransferFromAndSignature calldata permitTransferFromAndSignature
   ) external payable returns(bool);
 
   function pay(
-    IDePayRouterV2.Payment calldata payment,
+    IUnusPayRouterV2.Payment calldata payment,
     IPermit2.PermitSingle calldata permitSingle,
     bytes calldata signature
   ) external payable returns(bool);
@@ -817,17 +817,17 @@ interface IDePayRouterV2 {
 }
 
 
-// Dependency file: contracts/interfaces/IDePayForwarderV2.sol
+// Dependency file: contracts/interfaces/IUnusPayForwarderV2.sol
 
 
 // pragma solidity 0.8.18;
 
-// import 'contracts/interfaces/IDePayRouterV2.sol';
+// import 'contracts/interfaces/IUnusPayRouterV2.sol';
 
-interface IDePayForwarderV2 {
+interface IUnusPayForwarderV2 {
 
   function forward(
-    IDePayRouterV2.Payment calldata payment
+    IUnusPayRouterV2.Payment calldata payment
   ) external payable returns(bool);
 
   function toggle(bool stop) external returns(bool);
@@ -835,7 +835,7 @@ interface IDePayForwarderV2 {
 }
 
 
-// Root file: contracts/DePayRouterV2.sol
+// Root file: contracts/UnusPayRouterV2.sol
 
 
 pragma solidity 0.8.18;
@@ -843,13 +843,13 @@ pragma solidity 0.8.18;
 // import "@openzeppelin/contracts/access/Ownable2Step.sol";
 // import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 // import 'contracts/interfaces/IPermit2.sol';
-// import 'contracts/interfaces/IDePayRouterV2.sol';
-// import 'contracts/interfaces/IDePayForwarderV2.sol';
+// import 'contracts/interfaces/IUnusPayRouterV2.sol';
+// import 'contracts/interfaces/IUnusPayForwarderV2.sol';
 
-/// @title DePayRouterV2
+/// @title UnusPayRouterV2
 /// @notice This contract handles payments and token conversions.
 /// @dev Inherit from Ownable2Step for ownership functionalities.
-contract DePayRouterV2 is Ownable2Step {
+contract UnusPayRouterV2 is Ownable2Step {
 
   using SafeERC20 for IERC20;
 
@@ -900,7 +900,7 @@ contract DePayRouterV2 is Ownable2Step {
   /// @param payment The payment data.
   /// @return Returns true if successful.
   function _pay(
-    IDePayRouterV2.Payment calldata payment
+    IUnusPayRouterV2.Payment calldata payment
   ) internal returns(bool){
     uint256 balanceInBefore;
     uint256 balanceOutBefore;
@@ -917,7 +917,7 @@ contract DePayRouterV2 is Ownable2Step {
   /// @param payment The payment data.
   /// @return Returns true if successful.
   function pay(
-    IDePayRouterV2.Payment calldata payment
+    IUnusPayRouterV2.Payment calldata payment
   ) external payable returns(bool){
     return _pay(payment);
   }
@@ -927,8 +927,8 @@ contract DePayRouterV2 is Ownable2Step {
   /// @param permitTransferFromAndSignature The PermitTransferFrom and signature.
   /// @return Returns true if successful.
   function _pay(
-    IDePayRouterV2.Payment calldata payment,
-    IDePayRouterV2.PermitTransferFromAndSignature calldata permitTransferFromAndSignature
+    IUnusPayRouterV2.Payment calldata payment,
+    IUnusPayRouterV2.PermitTransferFromAndSignature calldata permitTransferFromAndSignature
   ) internal returns(bool){
     uint256 balanceInBefore;
     uint256 balanceOutBefore;
@@ -946,8 +946,8 @@ contract DePayRouterV2 is Ownable2Step {
   /// @param permitTransferFromAndSignature The PermitTransferFrom and signature.
   /// @return Returns true if successful.
   function pay(
-    IDePayRouterV2.Payment calldata payment,
-    IDePayRouterV2.PermitTransferFromAndSignature calldata permitTransferFromAndSignature
+    IUnusPayRouterV2.Payment calldata payment,
+    IUnusPayRouterV2.PermitTransferFromAndSignature calldata permitTransferFromAndSignature
   ) external payable returns(bool){
     return _pay(payment, permitTransferFromAndSignature);
   }
@@ -958,7 +958,7 @@ contract DePayRouterV2 is Ownable2Step {
   /// @param signature The permit signature.
   /// @return Returns true if successful.
   function _pay(
-    IDePayRouterV2.Payment calldata payment,
+    IUnusPayRouterV2.Payment calldata payment,
     IPermit2.PermitSingle calldata permitSingle,
     bytes calldata signature
   ) internal returns(bool){
@@ -980,7 +980,7 @@ contract DePayRouterV2 is Ownable2Step {
   /// @param signature The permit signature.
   /// @return Returns true if successful.
   function pay(
-    IDePayRouterV2.Payment calldata payment,
+    IUnusPayRouterV2.Payment calldata payment,
     IPermit2.PermitSingle calldata permitSingle,
     bytes calldata signature
   ) external payable returns(bool){
@@ -991,7 +991,7 @@ contract DePayRouterV2 is Ownable2Step {
   /// @param payment The payment data.
   /// @return balanceInBefore The balance in before the payment.
   /// @return balanceOutBefore The balance out before the payment.
-  function _validatePreConditions(IDePayRouterV2.Payment calldata payment) internal returns(uint256 balanceInBefore, uint256 balanceOutBefore) {
+  function _validatePreConditions(IUnusPayRouterV2.Payment calldata payment) internal returns(uint256 balanceInBefore, uint256 balanceOutBefore) {
     // Make sure payment deadline has not been passed, yet
     if(payment.deadline < block.timestamp) {
       revert PaymentDeadlineReached();
@@ -1030,7 +1030,7 @@ contract DePayRouterV2 is Ownable2Step {
   /// @dev Processes the payIn operations.
   /// @param payment The payment data.
   function _payIn(
-    IDePayRouterV2.Payment calldata payment
+    IUnusPayRouterV2.Payment calldata payment
   ) internal {
     if(payment.tokenInAddress == NATIVE) {
       // Make sure that the sender has paid in the correct token & amount
@@ -1048,8 +1048,8 @@ contract DePayRouterV2 is Ownable2Step {
   /// @param payment The payment data.
   /// @param permitTransferFromAndSignature permitTransferFromAndSignature for permit2 permitTransferFrom.
   function _payIn(
-    IDePayRouterV2.Payment calldata payment,
-    IDePayRouterV2.PermitTransferFromAndSignature calldata permitTransferFromAndSignature
+    IUnusPayRouterV2.Payment calldata payment,
+    IUnusPayRouterV2.PermitTransferFromAndSignature calldata permitTransferFromAndSignature
   ) internal {
       
     IPermit2(PERMIT2).permitTransferFrom(
@@ -1065,7 +1065,7 @@ contract DePayRouterV2 is Ownable2Step {
 
   /// @dev Processes the payment.
   /// @param payment The payment data.
-  function _performPayment(IDePayRouterV2.Payment calldata payment) internal {
+  function _performPayment(IUnusPayRouterV2.Payment calldata payment) internal {
     // Perform conversion if required
     if(payment.exchangeAddress != address(0)) {
       _convert(payment);
@@ -1084,7 +1084,7 @@ contract DePayRouterV2 is Ownable2Step {
   /// @param payment The payment data.
   /// @param balanceInBefore The balance in before the payment.
   /// @param balanceOutBefore The balance out before the payment.
-  function _validatePostConditions(IDePayRouterV2.Payment calldata payment, uint256 balanceInBefore, uint256 balanceOutBefore) internal view {
+  function _validatePostConditions(IUnusPayRouterV2.Payment calldata payment, uint256 balanceInBefore, uint256 balanceOutBefore) internal view {
     // Ensure balances of tokenIn remained
     if(payment.tokenInAddress == NATIVE) {
       if(address(this).balance < balanceInBefore) {
@@ -1110,7 +1110,7 @@ contract DePayRouterV2 is Ownable2Step {
 
   /// @dev Handles token conversions.
   /// @param payment The payment data.
-  function _convert(IDePayRouterV2.Payment calldata payment) internal {
+  function _convert(IUnusPayRouterV2.Payment calldata payment) internal {
     if(!exchanges[payment.exchangeAddress]) {
       revert ExchangeNotApproved();
     }
@@ -1138,17 +1138,17 @@ contract DePayRouterV2 is Ownable2Step {
 
   /// @dev Processes payment to receiver.
   /// @param payment The payment data.
-  function _payReceiver(IDePayRouterV2.Payment calldata payment) internal {
+  function _payReceiver(IUnusPayRouterV2.Payment calldata payment) internal {
     if(payment.receiverType != 0) { // call receiver contract
 
       {
         bool success;
         if(payment.tokenOutAddress == NATIVE) {
-          success = IDePayForwarderV2(FORWARDER).forward{value: payment.paymentAmount}(payment);
+          success = IUnusPayForwarderV2(FORWARDER).forward{value: payment.paymentAmount}(payment);
           emit InternalTransfer(msg.sender, payment.paymentReceiverAddress, payment.paymentAmount);
         } else {
           IERC20(payment.tokenOutAddress).safeTransfer(FORWARDER, payment.paymentAmount);
-          success = IDePayForwarderV2(FORWARDER).forward(payment);
+          success = IUnusPayForwarderV2(FORWARDER).forward(payment);
         }
         if(!success) {
           revert ForwardingPaymentFailed();
@@ -1174,7 +1174,7 @@ contract DePayRouterV2 is Ownable2Step {
 
   /// @dev Processes fee payments.
   /// @param payment The payment data.
-  function _payFee(IDePayRouterV2.Payment calldata payment) internal {
+  function _payFee(IUnusPayRouterV2.Payment calldata payment) internal {
     if(payment.tokenOutAddress == NATIVE) {
       (bool success,) = payment.feeReceiverAddress.call{value: payment.feeAmount}(new bytes(0));
       if(!success) {
@@ -1219,7 +1219,7 @@ contract DePayRouterV2 is Ownable2Step {
   ) external onlyOwner returns(bool) {
     if(token == NATIVE) {
       (bool success,) = address(msg.sender).call{value: amount}(new bytes(0));
-      require(success, 'DePay: withdraw failed!');
+      require(success, 'UnusPay: withdraw failed!');
     } else {
       IERC20(token).safeTransfer(msg.sender, amount);
     }

@@ -4,7 +4,7 @@ pragma solidity 0.8.18;
 
 import './IPermit2.sol';
 
-interface IDePayRouterV2 {
+interface IUnusPayRouterV2 {
 
   struct Payment {
     uint256 amountIn;
@@ -33,12 +33,12 @@ interface IDePayRouterV2 {
   ) external payable returns(bool);
 
   function pay(
-    IDePayRouterV2.Payment calldata payment,
+    IUnusPayRouterV2.Payment calldata payment,
     PermitTransferFromAndSignature calldata permitTransferFromAndSignature
   ) external payable returns(bool);
 
   function pay(
-    IDePayRouterV2.Payment calldata payment,
+    IUnusPayRouterV2.Payment calldata payment,
     IPermit2.PermitSingle calldata permitSingle,
     bytes calldata signature
   ) external payable returns(bool);

@@ -46,14 +46,14 @@ interface IPermit2 {
 }
 
 
-// Dependency file: contracts/interfaces/IDePayRouterV2.sol
+// Dependency file: contracts/interfaces/IUnusPayRouterV2.sol
 
 
 // pragma solidity 0.8.18;
 
 // import 'contracts/interfaces/IPermit2.sol';
 
-interface IDePayRouterV2 {
+interface IUnusPayRouterV2 {
 
   struct Payment {
     uint256 amountIn;
@@ -82,12 +82,12 @@ interface IDePayRouterV2 {
   ) external payable returns(bool);
 
   function pay(
-    IDePayRouterV2.Payment calldata payment,
+    IUnusPayRouterV2.Payment calldata payment,
     PermitTransferFromAndSignature calldata permitTransferFromAndSignature
   ) external payable returns(bool);
 
   function pay(
-    IDePayRouterV2.Payment calldata payment,
+    IUnusPayRouterV2.Payment calldata payment,
     IPermit2.PermitSingle calldata permitSingle,
     bytes calldata signature
   ) external payable returns(bool);
@@ -107,17 +107,17 @@ interface IDePayRouterV2 {
 }
 
 
-// Root file: contracts/interfaces/IDePayForwarderV2.sol
+// Root file: contracts/interfaces/IUnusPayForwarderV2.sol
 
 
 pragma solidity 0.8.18;
 
-// import 'contracts/interfaces/IDePayRouterV2.sol';
+// import 'contracts/interfaces/IUnusPayRouterV2.sol';
 
-interface IDePayForwarderV2 {
+interface IUnusPayForwarderV2 {
 
   function forward(
-    IDePayRouterV2.Payment calldata payment
+    IUnusPayRouterV2.Payment calldata payment
   ) external payable returns(bool);
 
   function toggle(bool stop) external returns(bool);

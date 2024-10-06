@@ -4,12 +4,12 @@ pragma solidity 0.8.18;
 
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import './interfaces/IDePayRouterV2.sol';
+import './interfaces/IUnusPayRouterV2.sol';
 
-/// @title DePayForwarderV2
+/// @title UnusPayForwarderV2
 /// @notice This contract forwards payments based on given instructions.
 /// @dev Inherit from Ownable2Step for ownership functionalities.
-contract DePayForwarderV2 is Ownable2Step {
+contract UnusPayForwarderV2 is Ownable2Step {
 
   using SafeERC20 for IERC20;
 
@@ -54,7 +54,7 @@ contract DePayForwarderV2 is Ownable2Step {
   /// @param payment The payment instruction data.
   /// @return Returns true if payment forwarding was successful.
   function forward(
-    IDePayRouterV2.Payment calldata payment
+    IUnusPayRouterV2.Payment calldata payment
   ) external payable notStopped onlyRouter returns(bool){
 
     bool success;
@@ -110,7 +110,7 @@ contract DePayForwarderV2 is Ownable2Step {
   ) external onlyOwner returns(bool) {
     if(token == NATIVE) {
       (bool success,) = address(msg.sender).call{value: amount}(new bytes(0));
-      require(success, 'DePay: withdraw failed!');
+      require(success, 'UnusPay: withdraw failed!');
     } else {
       IERC20(token).safeTransfer(msg.sender, amount);
     }

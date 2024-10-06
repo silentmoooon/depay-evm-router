@@ -4,9 +4,9 @@ pragma solidity 0.8.18;
 
 import './interfaces/IWETH.sol';
 
-/// @title DePayWETHExchangeV1
+/// @title UnusPayWETHExchangeV1
 /// @notice This contract limits access to WETH to the functions wrap & unwrap only.
-contract DePayWETHExchangeV1 {
+contract UnusPayWETHExchangeV1 {
 
   /// @notice Address of WETH
   IWETH public immutable WETH;
