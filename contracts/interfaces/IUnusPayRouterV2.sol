@@ -7,11 +7,12 @@ import './IPermit2.sol';
 interface IUnusPayRouterV2 {
 
   struct Payment {
-    uint256 amountIn;
+    uint256[] amountIn;
     bool permit2;
+    bool staging;
     uint256 paymentAmount;
     uint256 feeAmount;
-    address tokenInAddress;
+    address[] tokenInAddress;
     address exchangeAddress;
     address tokenOutAddress;
     address paymentReceiverAddress;
