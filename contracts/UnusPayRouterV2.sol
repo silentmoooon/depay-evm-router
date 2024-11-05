@@ -56,9 +56,9 @@ contract UnusPayRouterV2 is Ownable2Step {
   /// @dev Handles the payment process (tokenIn approval has been granted prior).
   /// @param payment The payment data.
   /// @return Returns true if successful.
-  function _pay(IUnusPayRouterV2.Payment calldata payment) internal returns (bool) {
+   function _pay(IUnusPayRouterV2.Payment calldata payment) internal returns (bool) {
     uint256[] balanceInBefore;
-    uint256 balanceOutBefore;
+    uint256[] balanceOutBefore;
 
     balanceInBefore = _validatePreConditionsTokenIn(payment);
     balanceOutBefore = _validatePreConditionsTokenOut(payment);
@@ -164,12 +164,12 @@ contract UnusPayRouterV2 is Ownable2Step {
   function _validatePreConditionsTokenIn(
     IUnusPayRouterV2.Payment calldata payment
   ) internal returns (uint256[] balanceInBefore) {
-    for (uint i = 0; i < payment.amountIn.length; i++) {
+    for (uint i = 0; i < payment.fromTokens.length; i++) {
       // Store tokenIn balance prior to payment
-      if (payment.tokenInAddress[i] == NATIVE) {
+      if (payment.fromTokens[i].tokenAddress == NATIVE) {
         balanceInBefore[i] = address(this).balance - msg.value;
       } else {
-        balanceInBefore[i] = IERC20(payment.tokenInAddress).balanceOf(address(this));
+        balanceInBefore[i] = IERC20(payment.fromTokens[i].tokenAddress).balanceOf(address(this));
       }
     }
   }
@@ -182,11 +182,15 @@ contract UnusPayRouterV2 is Ownable2Step {
     IUnusPayRouterV2.Payment calldata payment
   ) internal returns (uint256 balanceOutBefore) {
     // Store tokenOut balance prior to payment
-    if (payment.tokenOutAddress == NATIVE) {
-      balanceOutBefore = address(this).balance - msg.value;
-    } else {
-      balanceOutBefore = IERC20(payment.tokenOutAddress).balanceOf(address(this));
+    for (uint i = 0; i < payment.toTokens.length; i++) {
+      // Store tokenIn balance prior to payment
+      if (payment.toTokens[i].tokenAddress == NATIVE) {
+        balanceOutBefore[i] = address(this).balance - msg.value;
+      } else {
+        balanceOutBefore[i] = IERC20(payment.toTokens[i].tokenAddress).balanceOf(address(this));
+      }
     }
+     
   }
 
   /// @dev Handles permit2 operations.
