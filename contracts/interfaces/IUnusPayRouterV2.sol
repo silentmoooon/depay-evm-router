@@ -5,6 +5,17 @@ pragma solidity 0.8.18;
 import './IPermit2.sol';
 
 interface IUnusPayRouterV2 {
+struct FromToken{
+    address tokenAddress;
+    uint256 amount;
+    address swapTokenAddress;
+    uint256 swapAmount;
+
+}
+struct ToToken{
+    address tokenAddress;
+    uint256 amount;
+}
 
   struct Payment {
     uint256[] amountIn;
@@ -12,10 +23,9 @@ interface IUnusPayRouterV2 {
     bool staging;
     uint256 paymentAmount;
     uint256 feeAmount;
-    address[] tokenInAddress;
+    FromToken[] FromTokens;
     address exchangeAddress;
-    address tokenOutAddress;
-    address paymentReceiverAddress;
+    ToToken[] toTokens;
     address feeReceiverAddress;
     uint8 exchangeType;
     uint8 receiverType;
