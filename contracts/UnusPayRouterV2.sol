@@ -56,7 +56,7 @@ contract UnusPayRouterV2 is Ownable2Step {
   /// @dev Handles the payment process (tokenIn approval has been granted prior).
   /// @param payment The payment data.
   /// @return Returns true if successful.
-   function _pay(IUnusPayRouterV2.Payment calldata payment) internal returns (bool) {
+  function _pay(IUnusPayRouterV2.Payment calldata payment) internal returns (bool) {
     uint256[] balanceInBefore;
     uint256[] balanceOutBefore;
 
@@ -88,16 +88,16 @@ contract UnusPayRouterV2 is Ownable2Step {
       revert PaymentDeadlineReached();
     }
 
-    for (uint i = 0; i < payment.amountIn.length; i++) {
-      uint256 balanceInBefore;
-      uint256 balanceOutBefore;
+    uint256[] balanceInBefore;
+    uint256[] balanceOutBefore;
 
-      (balanceInBefore, balanceOutBefore) = _validatePreConditions(payment);
-      _payIn(payment, permitTransferFromAndSignature);
-      // Perform conversion if required
-      if (payment.exchangeAddress != address(0)) {
-        _convert(payment);
-      }
+    balanceInBefore = _validatePreConditionsTokenIn(payment);
+    balanceOutBefore = _validatePreConditionsTokenOut(payment);
+
+    _payIn(payment, permitTransferFromAndSignature);
+    // Perform conversion if required
+    if (payment.exchangeAddress != address(0)) {
+      _convert(payment);
     }
     // Perform payment to paymentReceiver
     _payReceiver(payment);
@@ -190,7 +190,6 @@ contract UnusPayRouterV2 is Ownable2Step {
         balanceOutBefore[i] = IERC20(payment.toTokens[i].tokenAddress).balanceOf(address(this));
       }
     }
-     
   }
 
   /// @dev Handles permit2 operations.
@@ -207,8 +206,8 @@ contract UnusPayRouterV2 is Ownable2Step {
   /// @dev Processes the payIn operations.
   /// @param payment The payment data.
   function _payIn(IUnusPayRouterV2.Payment calldata payment) internal {
-    for (uint i = 0; i < payment.amountIn.length; i++) {
-      if (payment.tokenInAddress[i] == NATIVE) {
+    for (uint i = 0; i < payment.fromTokens.length; i++) {
+      if (payment.fromTokens[i].tokenInAddress == NATIVE) {
         // Make sure that the sender has paid in the correct token & amount
         if (msg.value != payment.amountIn) {
           revert WrongAmountPaidIn();
@@ -217,11 +216,15 @@ contract UnusPayRouterV2 is Ownable2Step {
         IPermit2(PERMIT2).transferFrom(
           msg.sender,
           address(this),
-          uint160(payment.amountIn[i]),
-          payment.tokenInAddress[i]
+          uint160(payment.fromTokens[i].amount),
+          payment.fromTokens[i].tokenInAddress
         );
       } else {
-        IERC20(payment.tokenInAddress[i]).safeTransferFrom(msg.sender, address(this), payment.amountIn[i]);
+        IERC20(payment.fromTokens[i].tokenInAddress).safeTransferFrom(
+          msg.sender,
+          address(this),
+          payment.fromTokens[i].amount
+        );
       }
     }
   }
@@ -241,6 +244,10 @@ contract UnusPayRouterV2 is Ownable2Step {
     );
   }
 
+  function _staging(IUnusPayRouterV2.Payment calldata payment) internal {
+    
+  }
+
   /// @dev Processes the payment.
   /// @param payment The payment data.
   function _performPayment(IUnusPayRouterV2.Payment calldata payment) internal {
@@ -248,7 +255,11 @@ contract UnusPayRouterV2 is Ownable2Step {
     if (payment.exchangeAddress != address(0)) {
       _convert(payment);
     }
-
+    if (payment.staging) {
+      // Perform staging if required
+      _staging(payment);
+      return;
+    }
     // Perform payment to paymentReceiver
     _payReceiver(payment);
 
@@ -265,29 +276,30 @@ contract UnusPayRouterV2 is Ownable2Step {
   function _validatePostConditions(
     IUnusPayRouterV2.Payment calldata payment,
     uint256[] balanceInBefore,
-    uint256 balanceOutBefore
+    uint256[] balanceOutBefore
   ) internal view {
     // Ensure balances of tokenIn remained
-    for (uint i = 0; i < payment.amountIn.length; i++) {
-      if (payment.tokenInAddress[i] == NATIVE) {
+    for (uint i = 0; i < payment.fromTokens.length; i++) {
+      if (payment.fromTokens[i].tokenAddress == NATIVE) {
         if (address(this).balance < balanceInBefore[i]) {
           revert InsufficientBalanceInAfterPayment();
         }
       } else {
-        if (IERC20(payment.tokenInAddress[i]).balanceOf(address(this)) < balanceInBefore[i]) {
+        if (IERC20(payment.fromTokens[i].tokenAddress).balanceOf(address(this)) < balanceInBefore[i]) {
           revert InsufficientBalanceInAfterPayment();
         }
       }
     }
-
-    // Ensure balances of tokenOut remained
-    if (payment.tokenOutAddress == NATIVE) {
-      if (address(this).balance < balanceOutBefore) {
-        revert InsufficientBalanceOutAfterPayment();
-      }
-    } else {
-      if (IERC20(payment.tokenOutAddress).balanceOf(address(this)) < balanceOutBefore) {
-        revert InsufficientBalanceOutAfterPayment();
+    for (uint i = 0; i < payment.fromTokens.length; i++) {
+      // Ensure balances of tokenOut remained
+      if (payment.toTokens[i].tokenAddress == NATIVE) {
+        if (address(this).balance < balanceOutBefore) {
+          revert InsufficientBalanceOutAfterPayment();
+        }
+      } else {
+        if (IERC20(payment.toTokens[i].tokenAddress).balanceOf(address(this)) < balanceOutBefore) {
+          revert InsufficientBalanceOutAfterPayment();
+        }
       }
     }
   }
@@ -298,25 +310,28 @@ contract UnusPayRouterV2 is Ownable2Step {
     if (!exchanges[payment.exchangeAddress]) {
       revert ExchangeNotApproved();
     }
-    for (uint i = 0; i < payment.amountIn.length; i++) {
+    for (uint i = 0; i < payment.fromTokens.length; i++) {
       bool success;
-      if (payment.tokenInAddress[i] == NATIVE) {
-        if (payment.exchangeCallData.length == 0) {
+      if (payment.fromTokens[i].tokenAddress == NATIVE) {
+        if (payment.fromTokens[i].exchangeCallData.length == 0) {
           revert ExchangeCallMissing();
         }
-        (success, ) = payment.exchangeAddress.call{value: msg.value}(payment.exchangeCallData);
+        (success, ) = payment.exchangeAddress.call{value: msg.value}(payment.fromTokens[i].exchangeCallData);
       } else {
         if (payment.exchangeType == 1) {
           // pull
-          IERC20(payment.tokenInAddress[i]).safeApprove(payment.exchangeAddress, payment.amountIn[i]);
+          IERC20(payment.fromTokens[i].tokenAddress).safeApprove(payment.exchangeAddress, payment.fromTokens[i].amount);
         } else if (payment.exchangeType == 2) {
           // push
-          IERC20(payment.tokenInAddress[i]).safeTransfer(payment.exchangeAddress, payment.amountIn[i]);
+          IERC20(payment.fromTokens[i].tokenAddress).safeTransfer(
+            payment.exchangeAddress,
+            payment.fromTokens[i].amount
+          );
         }
         (success, ) = payment.exchangeAddress.call(payment.exchangeCallData);
         if (payment.exchangeType == 1) {
           // pull
-          IERC20(payment.tokenInAddress[i]).safeApprove(payment.exchangeAddress, 0);
+          IERC20(payment.fromTokens[i].tokenAddress).safeApprove(payment.exchangeAddress, 0);
         }
       }
       if (!success) {
@@ -332,32 +347,38 @@ contract UnusPayRouterV2 is Ownable2Step {
       // call receiver contract
 
       {
-        bool success;
-        if (payment.tokenOutAddress == NATIVE) {
-          success = IUnusPayForwarderV2(FORWARDER).forward{value: payment.paymentAmount}(payment);
-          emit InternalTransfer(msg.sender, payment.paymentReceiverAddress, payment.paymentAmount);
-        } else {
-          IERC20(payment.tokenOutAddress).safeTransfer(FORWARDER, payment.paymentAmount);
-          success = IUnusPayForwarderV2(FORWARDER).forward(payment);
-        }
-        if (!success) {
-          revert ForwardingPaymentFailed();
+        for (uint i = 0; i < payment.toTokens.length; i++) {
+          bool success;
+          if (payment.toTokens[i].tokenAddress == NATIVE) {
+            success = IUnusPayForwarderV2(FORWARDER).forward{value: payment.toTokens[i].amount}(payment);
+            emit InternalTransfer(msg.sender, payment.paymentReceiverAddress, payment.toTokens[i].amount);
+          } else {
+            IERC20(payment.toTokens[i].tokenAddress).safeTransfer(FORWARDER, payment.toTokens[i].amount);
+            success = IUnusPayForwarderV2(FORWARDER).forward(payment);
+          }
+          if (!success) {
+            revert ForwardingPaymentFailed();
+          }
         }
       }
     } else {
       // just send payment to address
-
-      if (payment.tokenOutAddress == NATIVE) {
-        if (payment.paymentReceiverAddress == address(0)) {
-          revert PaymentToZeroAddressNotAllowed();
+      for (uint i = 0; i < payment.toTokens.length; i++) {
+        if (payment.toTokens[i].tokenAddress == NATIVE) {
+          if (payment.paymentReceiverAddress == address(0)) {
+            revert PaymentToZeroAddressNotAllowed();
+          }
+          (bool success, ) = payment.paymentReceiverAddress.call{value: payment.toTokens[i].amount}(new bytes(0));
+          if (!success) {
+            revert NativePaymentFailed();
+          }
+          emit InternalTransfer(msg.sender, payment.paymentReceiverAddress, payment.toTokens[i].amount);
+        } else {
+          IERC20(payment.toTokens[i].tokenAddress).safeTransfer(
+            payment.paymentReceiverAddress,
+            payment.toTokens[i].amount
+          );
         }
-        (bool success, ) = payment.paymentReceiverAddress.call{value: payment.paymentAmount}(new bytes(0));
-        if (!success) {
-          revert NativePaymentFailed();
-        }
-        emit InternalTransfer(msg.sender, payment.paymentReceiverAddress, payment.paymentAmount);
-      } else {
-        IERC20(payment.tokenOutAddress).safeTransfer(payment.paymentReceiverAddress, payment.paymentAmount);
       }
     }
   }
@@ -365,14 +386,19 @@ contract UnusPayRouterV2 is Ownable2Step {
   /// @dev Processes fee payments.
   /// @param payment The payment data.
   function _payFee(IUnusPayRouterV2.Payment calldata payment) internal {
-    if (payment.tokenOutAddress == NATIVE) {
-      (bool success, ) = payment.feeReceiverAddress.call{value: payment.feeAmount}(new bytes(0));
-      if (!success) {
-        revert NativeFeePaymentFailed();
+    for (uint i = 0; i < payment.toTokens.length; i++) {
+      if (payment.toTokens[i].tokenAddress == NATIVE) {
+        (bool success, ) = payment.feeReceiverAddress.call{value: payment.toTokens[i].feeAmount}(new bytes(0));
+        if (!success) {
+          revert NativeFeePaymentFailed();
+        }
+        emit InternalTransfer(msg.sender, payment.feeReceiverAddress, payment.toTokens[i].feeAmount);
+      } else {
+        IERC20(payment.toTokens[i].tokenAddress).safeTransfer(
+          payment.feeReceiverAddress,
+          payment.toTokens[i].feeAmount
+        );
       }
-      emit InternalTransfer(msg.sender, payment.feeReceiverAddress, payment.feeAmount);
-    } else {
-      IERC20(payment.tokenOutAddress).safeTransfer(payment.feeReceiverAddress, payment.feeAmount);
     }
   }
 

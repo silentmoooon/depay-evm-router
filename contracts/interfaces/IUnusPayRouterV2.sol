@@ -8,6 +8,7 @@ interface IUnusPayRouterV2 {
  struct FromToken{
     address tokenAddress;
     uint256 amount;
+    bytes exchangeCallData;
     address swapTokenAddress;
     uint256 swapAmount;
  }
@@ -27,7 +28,6 @@ interface IUnusPayRouterV2 {
     address feeReceiverAddress;
     uint8 exchangeType;
     uint8 receiverType;
-    bytes exchangeCallData;
     bytes receiverCallData;
     uint256 deadline;
   }
