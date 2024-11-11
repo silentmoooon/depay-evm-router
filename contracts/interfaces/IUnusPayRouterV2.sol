@@ -19,8 +19,6 @@ interface IUnusPayRouterV2 {
  }
   struct Payment {
     bool permit2;
-    //是否暂存,暂存的不实时转给收款人
-    bool staging;
     FromToken[] FromTokens;
     address exchangeAddress;
     ToToken[] ToTokens;

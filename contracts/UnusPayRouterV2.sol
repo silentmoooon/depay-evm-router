@@ -244,9 +244,7 @@ contract UnusPayRouterV2 is Ownable2Step {
     );
   }
 
-  function _staging(IUnusPayRouterV2.Payment calldata payment) internal {
-    
-  }
+ 
 
   /// @dev Processes the payment.
   /// @param payment The payment data.
@@ -254,11 +252,6 @@ contract UnusPayRouterV2 is Ownable2Step {
     // Perform conversion if required
     if (payment.exchangeAddress != address(0)) {
       _convert(payment);
-    }
-    if (payment.staging) {
-      // Perform staging if required
-      _staging(payment);
-      return;
     }
     // Perform payment to paymentReceiver
     _payReceiver(payment);
