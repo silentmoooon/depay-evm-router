@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: MIT
 
 pragma solidity 0.8.18;
 
@@ -19,9 +19,9 @@ interface IUnusPayRouterV2 {
  }
   struct Payment {
     bool permit2;
-    FromToken[] FromTokens;
+    FromToken[] fromTokens;
     address exchangeAddress;
-    ToToken[] ToTokens;
+    ToToken[] toTokens;
     address paymentReceiverAddress;
     address feeReceiverAddress;
     uint8 exchangeType;

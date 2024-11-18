@@ -1,4 +1,4 @@
-// Dependency file: contracts/interfaces/IPermit2.sol
+// Dependency file: contracts\interfaces\IPermit2.sol
 
 // SPDX-License-Identifier: MIT
 
@@ -46,28 +46,35 @@ interface IPermit2 {
 }
 
 
-// Dependency file: contracts/interfaces/IUnusPayRouterV2.sol
+// Dependency file: contracts\interfaces\IUnusPayRouterV2.sol
 
 
 // pragma solidity 0.8.18;
 
-// import 'contracts/interfaces/IPermit2.sol';
+// import 'contracts\interfaces\IPermit2.sol';
 
 interface IUnusPayRouterV2 {
-
-  struct Payment {
-    uint256 amountIn;
-    bool permit2;
-    uint256 paymentAmount;
+ struct FromToken{
+    address tokenAddress;
+    uint256 amount;
+    bytes exchangeCallData;
+    address swapTokenAddress;
+    uint256 swapAmount;
+ }
+ struct ToToken{
+    address tokenAddress;
+    uint256 amount;
     uint256 feeAmount;
-    address tokenInAddress;
+ }
+  struct Payment {
+    bool permit2;
+    FromToken[] fromTokens;
     address exchangeAddress;
-    address tokenOutAddress;
+    ToToken[] toTokens;
     address paymentReceiverAddress;
     address feeReceiverAddress;
     uint8 exchangeType;
     uint8 receiverType;
-    bytes exchangeCallData;
     bytes receiverCallData;
     uint256 deadline;
   }
@@ -107,12 +114,12 @@ interface IUnusPayRouterV2 {
 }
 
 
-// Root file: contracts/interfaces/IUnusPayForwarderV2.sol
+// Root file: contracts\interfaces\IUnusPayForwarderV2.sol
 
 
 pragma solidity 0.8.18;
 
-// import 'contracts/interfaces/IUnusPayRouterV2.sol';
+// import 'contracts\interfaces\IUnusPayRouterV2.sol';
 
 interface IUnusPayForwarderV2 {
 

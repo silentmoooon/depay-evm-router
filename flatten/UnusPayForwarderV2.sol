@@ -1,4 +1,4 @@
-// Dependency file: @openzeppelin/contracts/utils/Context.sol
+// Dependency file: C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\utils\Context.sol
 
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts v4.4.1 (utils/Context.sol)
@@ -26,13 +26,13 @@ abstract contract Context {
 }
 
 
-// Dependency file: @openzeppelin/contracts/access/Ownable.sol
+// Dependency file: C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\access\Ownable.sol
 
 // OpenZeppelin Contracts (last updated v4.9.0) (access/Ownable.sol)
 
 // pragma solidity ^0.8.0;
 
-// import "@openzeppelin/contracts/utils/Context.sol";
+// import "C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\utils\Context.sol";
 
 /**
  * @dev Contract module which provides a basic access control mechanism, where
@@ -112,13 +112,13 @@ abstract contract Ownable is Context {
 }
 
 
-// Dependency file: @openzeppelin/contracts/access/Ownable2Step.sol
+// Dependency file: C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\access\Ownable2Step.sol
 
 // OpenZeppelin Contracts (last updated v4.9.0) (access/Ownable2Step.sol)
 
 // pragma solidity ^0.8.0;
 
-// import "@openzeppelin/contracts/access/Ownable.sol";
+// import "C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\access\Ownable.sol";
 
 /**
  * @dev Contract module which provides access control mechanism, where
@@ -172,7 +172,7 @@ abstract contract Ownable2Step is Ownable {
 }
 
 
-// Dependency file: @openzeppelin/contracts/token/ERC20/IERC20.sol
+// Dependency file: C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\token\ERC20\IERC20.sol
 
 // OpenZeppelin Contracts (last updated v4.9.0) (token/ERC20/IERC20.sol)
 
@@ -253,7 +253,7 @@ interface IERC20 {
 }
 
 
-// Dependency file: @openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol
+// Dependency file: C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\token\ERC20\extensions\IERC20Permit.sol
 
 // OpenZeppelin Contracts (last updated v4.9.0) (token/ERC20/extensions/IERC20Permit.sol)
 
@@ -316,7 +316,7 @@ interface IERC20Permit {
 }
 
 
-// Dependency file: @openzeppelin/contracts/utils/Address.sol
+// Dependency file: C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\utils\Address.sol
 
 // OpenZeppelin Contracts (last updated v4.9.0) (utils/Address.sol)
 
@@ -563,15 +563,15 @@ library Address {
 }
 
 
-// Dependency file: @openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
+// Dependency file: C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\token\ERC20\utils\SafeERC20.sol
 
 // OpenZeppelin Contracts (last updated v4.9.3) (token/ERC20/utils/SafeERC20.sol)
 
 // pragma solidity ^0.8.0;
 
-// import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-// import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
-// import "@openzeppelin/contracts/utils/Address.sol";
+// import "C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\token\ERC20\IERC20.sol";
+// import "C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\token\ERC20\extensions\IERC20Permit.sol";
+// import "C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\utils\Address.sol";
 
 /**
  * @title SafeERC20
@@ -709,7 +709,7 @@ library SafeERC20 {
 }
 
 
-// Dependency file: contracts/interfaces/IPermit2.sol
+// Dependency file: contracts\interfaces\IPermit2.sol
 
 
 // pragma solidity 0.8.18;
@@ -756,28 +756,35 @@ interface IPermit2 {
 }
 
 
-// Dependency file: contracts/interfaces/IUnusPayRouterV2.sol
+// Dependency file: contracts\interfaces\IUnusPayRouterV2.sol
 
 
 // pragma solidity 0.8.18;
 
-// import 'contracts/interfaces/IPermit2.sol';
+// import 'contracts\interfaces\IPermit2.sol';
 
 interface IUnusPayRouterV2 {
-
-  struct Payment {
-    uint256 amountIn;
-    bool permit2;
-    uint256 paymentAmount;
+ struct FromToken{
+    address tokenAddress;
+    uint256 amount;
+    bytes exchangeCallData;
+    address swapTokenAddress;
+    uint256 swapAmount;
+ }
+ struct ToToken{
+    address tokenAddress;
+    uint256 amount;
     uint256 feeAmount;
-    address tokenInAddress;
+ }
+  struct Payment {
+    bool permit2;
+    FromToken[] fromTokens;
     address exchangeAddress;
-    address tokenOutAddress;
+    ToToken[] toTokens;
     address paymentReceiverAddress;
     address feeReceiverAddress;
     uint8 exchangeType;
     uint8 receiverType;
-    bytes exchangeCallData;
     bytes receiverCallData;
     uint256 deadline;
   }
@@ -817,14 +824,14 @@ interface IUnusPayRouterV2 {
 }
 
 
-// Root file: contracts/UnusPayForwarderV2.sol
+// Root file: contracts\UnusPayForwarderV2.sol
 
 
 pragma solidity 0.8.18;
 
-// import "@openzeppelin/contracts/access/Ownable2Step.sol";
-// import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-// import 'contracts/interfaces/IUnusPayRouterV2.sol';
+// import "C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\access\Ownable2Step.sol";
+// import "C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\token\ERC20\utils\SafeERC20.sol";
+// import 'contracts\interfaces\IUnusPayRouterV2.sol';
 
 /// @title UnusPayForwarderV2
 /// @notice This contract forwards payments based on given instructions.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: MIT
 
 pragma solidity 0.8.18;
 
@@ -57,8 +57,8 @@ contract UnusPayRouterV2 is Ownable2Step {
   /// @param payment The payment data.
   /// @return Returns true if successful.
   function _pay(IUnusPayRouterV2.Payment calldata payment) internal returns (bool) {
-    uint256[] balanceInBefore;
-    uint256[] balanceOutBefore;
+    uint256[] memory balanceInBefore;
+    uint256[] memory balanceOutBefore;
 
     balanceInBefore = _validatePreConditionsTokenIn(payment);
     balanceOutBefore = _validatePreConditionsTokenOut(payment);
@@ -88,8 +88,8 @@ contract UnusPayRouterV2 is Ownable2Step {
       revert PaymentDeadlineReached();
     }
 
-    uint256[] balanceInBefore;
-    uint256[] balanceOutBefore;
+    uint256[] memory balanceInBefore;
+    uint256[] memory balanceOutBefore;
 
     balanceInBefore = _validatePreConditionsTokenIn(payment);
     balanceOutBefore = _validatePreConditionsTokenOut(payment);
@@ -132,10 +132,11 @@ contract UnusPayRouterV2 is Ownable2Step {
     IPermit2.PermitSingle calldata permitSingle,
     bytes calldata signature
   ) internal returns (bool) {
-    uint256 balanceInBefore;
-    uint256 balanceOutBefore;
+    uint256[] memory balanceInBefore;
+    uint256[] memory balanceOutBefore;
 
-    (balanceInBefore, balanceOutBefore) = _validatePreConditions(payment);
+    balanceInBefore = _validatePreConditionsTokenIn(payment);
+    balanceOutBefore = _validatePreConditionsTokenOut(payment);
     _permit(permitSingle, signature);
     _payIn(payment);
     _performPayment(payment);
@@ -160,10 +161,10 @@ contract UnusPayRouterV2 is Ownable2Step {
   /// @dev Validates the pre-conditions for a payment.
   /// @param payment The payment data.
   /// @return balanceInBefore The balance in before the payment.
-  /// @return balanceOutBefore The balance out before the payment.
   function _validatePreConditionsTokenIn(
     IUnusPayRouterV2.Payment calldata payment
-  ) internal returns (uint256[] balanceInBefore) {
+  ) internal returns (uint256[] memory) {
+    uint256[] memory balanceInBefore;
     for (uint i = 0; i < payment.fromTokens.length; i++) {
       // Store tokenIn balance prior to payment
       if (payment.fromTokens[i].tokenAddress == NATIVE) {
@@ -172,16 +173,17 @@ contract UnusPayRouterV2 is Ownable2Step {
         balanceInBefore[i] = IERC20(payment.fromTokens[i].tokenAddress).balanceOf(address(this));
       }
     }
+    return balanceInBefore;
   }
 
   /// @dev Validates the pre-conditions for a payment.
   /// @param payment The payment data.
-  /// @return balanceInBefore The balance in before the payment.
   /// @return balanceOutBefore The balance out before the payment.
   function _validatePreConditionsTokenOut(
     IUnusPayRouterV2.Payment calldata payment
-  ) internal returns (uint256 balanceOutBefore) {
+  ) internal returns (uint256[] memory) {
     // Store tokenOut balance prior to payment
+    uint256[] memory balanceOutBefore;
     for (uint i = 0; i < payment.toTokens.length; i++) {
       // Store tokenIn balance prior to payment
       if (payment.toTokens[i].tokenAddress == NATIVE) {
@@ -190,6 +192,7 @@ contract UnusPayRouterV2 is Ownable2Step {
         balanceOutBefore[i] = IERC20(payment.toTokens[i].tokenAddress).balanceOf(address(this));
       }
     }
+    return balanceOutBefore;
   }
 
   /// @dev Handles permit2 operations.
@@ -207,9 +210,9 @@ contract UnusPayRouterV2 is Ownable2Step {
   /// @param payment The payment data.
   function _payIn(IUnusPayRouterV2.Payment calldata payment) internal {
     for (uint i = 0; i < payment.fromTokens.length; i++) {
-      if (payment.fromTokens[i].tokenInAddress == NATIVE) {
+      if (payment.fromTokens[i].tokenAddress == NATIVE) {
         // Make sure that the sender has paid in the correct token & amount
-        if (msg.value != payment.amountIn) {
+        if (msg.value != payment.fromTokens[i].amount) {
           revert WrongAmountPaidIn();
         }
       } else if (payment.permit2) {
@@ -217,10 +220,10 @@ contract UnusPayRouterV2 is Ownable2Step {
           msg.sender,
           address(this),
           uint160(payment.fromTokens[i].amount),
-          payment.fromTokens[i].tokenInAddress
+          payment.fromTokens[i].tokenAddress
         );
       } else {
-        IERC20(payment.fromTokens[i].tokenInAddress).safeTransferFrom(
+        IERC20(payment.fromTokens[i].tokenAddress).safeTransferFrom(
           msg.sender,
           address(this),
           payment.fromTokens[i].amount
@@ -238,7 +241,7 @@ contract UnusPayRouterV2 is Ownable2Step {
   ) internal {
     IPermit2(PERMIT2).permitTransferFrom(
       permitTransferFromAndSignature.permitTransferFrom,
-      IPermit2.SignatureTransferDetails({to: address(this), requestedAmount: payment.amountIn}),
+      IPermit2.SignatureTransferDetails({to: address(this), requestedAmount: payment.fromTokens[0].amount}),
       msg.sender,
       permitTransferFromAndSignature.signature
     );
@@ -268,8 +271,8 @@ contract UnusPayRouterV2 is Ownable2Step {
   /// @param balanceOutBefore The balance out before the payment.
   function _validatePostConditions(
     IUnusPayRouterV2.Payment calldata payment,
-    uint256[] balanceInBefore,
-    uint256[] balanceOutBefore
+    uint256[] memory balanceInBefore,
+    uint256[] memory balanceOutBefore
   ) internal view {
     // Ensure balances of tokenIn remained
     for (uint i = 0; i < payment.fromTokens.length; i++) {
@@ -283,14 +286,14 @@ contract UnusPayRouterV2 is Ownable2Step {
         }
       }
     }
-    for (uint i = 0; i < payment.fromTokens.length; i++) {
+    for (uint i = 0; i < payment.toTokens.length; i++) {
       // Ensure balances of tokenOut remained
       if (payment.toTokens[i].tokenAddress == NATIVE) {
-        if (address(this).balance < balanceOutBefore) {
+        if (address(this).balance < balanceOutBefore[i]) {
           revert InsufficientBalanceOutAfterPayment();
         }
       } else {
-        if (IERC20(payment.toTokens[i].tokenAddress).balanceOf(address(this)) < balanceOutBefore) {
+        if (IERC20(payment.toTokens[i].tokenAddress).balanceOf(address(this)) < balanceOutBefore[i]) {
           revert InsufficientBalanceOutAfterPayment();
         }
       }
@@ -321,7 +324,7 @@ contract UnusPayRouterV2 is Ownable2Step {
             payment.fromTokens[i].amount
           );
         }
-        (success, ) = payment.exchangeAddress.call(payment.exchangeCallData);
+        (success, ) = payment.exchangeAddress.call(payment.fromTokens[i].exchangeCallData);
         if (payment.exchangeType == 1) {
           // pull
           IERC20(payment.fromTokens[i].tokenAddress).safeApprove(payment.exchangeAddress, 0);
