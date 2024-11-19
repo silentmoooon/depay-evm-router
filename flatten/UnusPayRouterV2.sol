@@ -1153,7 +1153,9 @@ contract UnusPayRouterV2 is Ownable2Step {
     }
     for (uint i = 0; i < payment.fromTokens.length; i++) {
       bool success;
-      if (payment.fromTokens[i].tokenAddress == NATIVE) {
+      if (payment.fromTokens[i].tokenAddress == address(0)) {
+          break;
+      }else if (payment.fromTokens[i].tokenAddress == NATIVE) {
         if (payment.fromTokens[i].exchangeCallData.length == 0) {
           revert ExchangeCallMissing();
         }
