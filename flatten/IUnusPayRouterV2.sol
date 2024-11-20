@@ -54,7 +54,7 @@ pragma solidity 0.8.18;
 // import 'contracts\interfaces\IPermit2.sol';
 
 interface IUnusPayRouterV2 {
- struct FromToken{
+ struct FromToken {
     address tokenAddress;
     uint256 amount;
     bytes exchangeCallData;
