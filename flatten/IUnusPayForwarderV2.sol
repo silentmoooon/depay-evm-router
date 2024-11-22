@@ -79,26 +79,12 @@ interface IUnusPayRouterV2 {
     uint256 deadline;
   }
 
-  struct PermitTransferFromAndSignature {
-    IPermit2.PermitTransferFrom permitTransferFrom;
-    bytes signature;
-  }
+ 
 
   function pay(
     Payment calldata payment
   ) external payable returns(bool);
-
-  function pay(
-    IUnusPayRouterV2.Payment calldata payment,
-    PermitTransferFromAndSignature calldata permitTransferFromAndSignature
-  ) external payable returns(bool);
-
-  function pay(
-    IUnusPayRouterV2.Payment calldata payment,
-    IPermit2.PermitSingle calldata permitSingle,
-    bytes calldata signature
-  ) external payable returns(bool);
-
+ 
   event Enabled(
     address indexed exchange
   );

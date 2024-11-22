@@ -6,7 +6,6 @@ import '@openzeppelin/contracts/access/Ownable2Step.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import './interfaces/IPermit2.sol';
 import './interfaces/IUnusPayRouterV2.sol';
-import './interfaces/IUnusPayForwarderV2.sol';
 
 /// @title UnusPayRouterV2
 /// @notice This contract handles payments and token conversions.
@@ -15,36 +14,28 @@ contract UnusPayRouterV2 is Ownable2Step {
   using SafeERC20 for IERC20;
 
   // Custom errors
-  error PaymentDeadlineReached();
-  error WrongAmountPaidIn();
-  error ExchangeNotApproved();
-  error ExchangeCallMissing();
-  error ExchangeCallFailed();
-  error ForwardingPaymentFailed();
-  error NativePaymentFailed();
-  error NativeFeePaymentFailed();
-  error PaymentToZeroAddressNotAllowed();
-  error InsufficientBalanceInAfterPayment();
-  error InsufficientBalanceOutAfterPayment();
+  error PaymentDeadlineReached(string msg);
+  error WrongAmountPaidIn(string msg);
+  error ExchangeNotApproved(string msg);
+  error ExchangeCallMissing(string msg);
+  error ExchangeCallFailed(string msg);
+  error ForwardingPaymentFailed(string msg);
+  error NativePaymentFailed(string msg);
+  error NativeFeePaymentFailed(string msg);
+  error PaymentToZeroAddressNotAllowed(string msg);
+  error InsufficientBalanceInAfterPayment(string msg);
+  error InsufficientBalanceOutAfterPayment(string msg);
 
   /// @notice Address representing the NATIVE token (e.g. ETH, BNB, MATIC, etc.)
   address constant NATIVE = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
-  /// @notice Address of PERMIT2
-  address public immutable PERMIT2;
-
-  /// @notice Address of the payment FORWARDER contract
-  address public immutable FORWARDER;
-
+ 
   /// @notice List of approved exchanges for conversion.
   mapping(address => bool) public exchanges;
 
-  /// @dev Initializes the contract with PERMIT2 and FORWARDER addresses.
-  /// @param _PERMIT2 The address of the PERMIT2 contract.
-  /// @param _FORWARDER The address of the FORWARDER contract.
-  constructor(address _PERMIT2, address _FORWARDER) {
-    PERMIT2 = _PERMIT2;
-    FORWARDER = _FORWARDER;
+  /// @dev Initializes the contract
+  constructor() {
+ 
   }
 
   /// @notice Accepts NATIVE payments, which is required in order to swap from and to NATIVE, especially unwrapping as part of conversions.
@@ -52,6 +43,7 @@ contract UnusPayRouterV2 is Ownable2Step {
 
   /// @dev Transfer polyfil event for internal transfers.
   event InternalTransfer(address indexed from, address indexed to, uint256 value);
+  event Step(uint32 step);
 
   /// @dev Handles the payment process (tokenIn approval has been granted prior).
   /// @param payment The payment data.
@@ -59,13 +51,17 @@ contract UnusPayRouterV2 is Ownable2Step {
   function _pay(IUnusPayRouterV2.Payment calldata payment) internal returns (bool) {
     uint256[] memory balanceInBefore;
     uint256[] memory balanceOutBefore;
-
+    emit Step(1);
     balanceInBefore = _validatePreConditionsTokenIn(payment);
+     emit Step(2);
     balanceOutBefore = _validatePreConditionsTokenOut(payment);
+     emit Step(3);
     _payIn(payment);
+     emit Step(4);
     _performPayment(payment);
+     emit Step(8);
     _validatePostConditions(payment, balanceInBefore, balanceOutBefore);
-
+emit Step(9);
     return true;
   }
 
@@ -75,88 +71,7 @@ contract UnusPayRouterV2 is Ownable2Step {
   function pay(IUnusPayRouterV2.Payment calldata payment) external payable returns (bool) {
     return _pay(payment);
   }
-
-  /// @dev Handles the payment process with permit2 SignatureTransfer.
-  /// @param payment The payment data.
-  /// @param permitTransferFromAndSignature The PermitTransferFrom and signature.
-  /// @return Returns true if successful.
-  function _pay(
-    IUnusPayRouterV2.Payment calldata payment,
-    IUnusPayRouterV2.PermitTransferFromAndSignature calldata permitTransferFromAndSignature
-  ) internal returns (bool) {
-    if (payment.deadline < block.timestamp) {
-      revert PaymentDeadlineReached();
-    }
-
-    uint256[] memory balanceInBefore;
-    uint256[] memory balanceOutBefore;
-
-    balanceInBefore = _validatePreConditionsTokenIn(payment);
-    balanceOutBefore = _validatePreConditionsTokenOut(payment);
-
-    _payIn(payment, permitTransferFromAndSignature);
-    // Perform conversion if required
-    if (payment.exchangeAddress != address(0)) {
-      _convert(payment);
-    }
-    // Perform payment to paymentReceiver
-    _payReceiver(payment);
-
-    // Perform payment to feeReceiver
-    if (payment.feeReceiverAddress != address(0)) {
-      _payFee(payment);
-    }
-    _validatePostConditions(payment, balanceInBefore, balanceOutBefore);
-
-    return true;
-  }
-
-  /// @notice Handles the payment process with permit2 SignatureTransfer for external callers.
-  /// @param payment The payment data.
-  /// @param permitTransferFromAndSignature The PermitTransferFrom and signature.
-  /// @return Returns true if successful.
-  function pay(
-    IUnusPayRouterV2.Payment calldata payment,
-    IUnusPayRouterV2.PermitTransferFromAndSignature calldata permitTransferFromAndSignature
-  ) external payable returns (bool) {
-    return _pay(payment, permitTransferFromAndSignature);
-  }
-
-  /// @dev Handles the payment process with permit2 AllowanceTransfer.
-  /// @param payment The payment data.
-  /// @param permitSingle The permit single data.
-  /// @param signature The permit signature.
-  /// @return Returns true if successful.
-  function _pay(
-    IUnusPayRouterV2.Payment calldata payment,
-    IPermit2.PermitSingle calldata permitSingle,
-    bytes calldata signature
-  ) internal returns (bool) {
-    uint256[] memory balanceInBefore;
-    uint256[] memory balanceOutBefore;
-
-    balanceInBefore = _validatePreConditionsTokenIn(payment);
-    balanceOutBefore = _validatePreConditionsTokenOut(payment);
-    _permit(permitSingle, signature);
-    _payIn(payment);
-    _performPayment(payment);
-    _validatePostConditions(payment, balanceInBefore, balanceOutBefore);
-
-    return true;
-  }
-
-  /// @notice Handles the payment process with permit2 AllowanceTransfer for external callers.
-  /// @param payment The payment data.
-  /// @param permitSingle The permit single data.
-  /// @param signature The permit signature.
-  /// @return Returns true if successful.
-  function pay(
-    IUnusPayRouterV2.Payment calldata payment,
-    IPermit2.PermitSingle calldata permitSingle,
-    bytes calldata signature
-  ) external payable returns (bool) {
-    return _pay(payment, permitSingle, signature);
-  }
+  
 
   /// @dev Validates the pre-conditions for a payment.
   /// @param payment The payment data.
@@ -195,17 +110,7 @@ contract UnusPayRouterV2 is Ownable2Step {
     return balanceOutBefore;
   }
 
-  /// @dev Handles permit2 operations.
-  /// @param permitSingle The permit single data.
-  /// @param signature The permit signature.
-  function _permit(IPermit2.PermitSingle calldata permitSingle, bytes calldata signature) internal {
-    IPermit2(PERMIT2).permit(
-      msg.sender, // owner
-      permitSingle,
-      signature
-    );
-  }
-
+ 
   /// @dev Processes the payIn operations.
   /// @param payment The payment data.
   function _payIn(IUnusPayRouterV2.Payment calldata payment) internal {
@@ -213,15 +118,8 @@ contract UnusPayRouterV2 is Ownable2Step {
       if (payment.fromTokens[i].tokenAddress == NATIVE) {
         // Make sure that the sender has paid in the correct token & amount
         if (msg.value != payment.fromTokens[i].amount) {
-          revert WrongAmountPaidIn();
+          revert WrongAmountPaidIn("11111");
         }
-      } else if (payment.permit2) {
-        IPermit2(PERMIT2).transferFrom(
-          msg.sender,
-          address(this),
-          uint160(payment.fromTokens[i].amount),
-          payment.fromTokens[i].tokenAddress
-        );
       } else {
         IERC20(payment.fromTokens[i].tokenAddress).safeTransferFrom(
           msg.sender,
@@ -232,21 +130,7 @@ contract UnusPayRouterV2 is Ownable2Step {
     }
   }
 
-  /// @dev Processes the payIn operations (exlusively for permit2 SignatureTransfer).
-  /// @param payment The payment data.
-  /// @param permitTransferFromAndSignature permitTransferFromAndSignature for permit2 permitTransferFrom.
-  function _payIn(
-    IUnusPayRouterV2.Payment calldata payment,
-    IUnusPayRouterV2.PermitTransferFromAndSignature calldata permitTransferFromAndSignature
-  ) internal {
-    IPermit2(PERMIT2).permitTransferFrom(
-      permitTransferFromAndSignature.permitTransferFrom,
-      IPermit2.SignatureTransferDetails({to: address(this), requestedAmount: payment.fromTokens[0].amount}),
-      msg.sender,
-      permitTransferFromAndSignature.signature
-    );
-  }
-
+ 
  
 
   /// @dev Processes the payment.
@@ -254,13 +138,16 @@ contract UnusPayRouterV2 is Ownable2Step {
   function _performPayment(IUnusPayRouterV2.Payment calldata payment) internal {
     // Perform conversion if required
     if (payment.exchangeAddress != address(0)) {
+         emit Step(5);
       _convert(payment);
     }
     // Perform payment to paymentReceiver
+     emit Step(6);
     _payReceiver(payment);
 
     // Perform payment to feeReceiver
     if (payment.feeReceiverAddress != address(0)) {
+         emit Step(7);
       _payFee(payment);
     }
   }
@@ -278,11 +165,11 @@ contract UnusPayRouterV2 is Ownable2Step {
     for (uint i = 0; i < payment.fromTokens.length; i++) {
       if (payment.fromTokens[i].tokenAddress == NATIVE) {
         if (address(this).balance < balanceInBefore[i]) {
-          revert InsufficientBalanceInAfterPayment();
+          revert InsufficientBalanceInAfterPayment("22222");
         }
       } else {
         if (IERC20(payment.fromTokens[i].tokenAddress).balanceOf(address(this)) < balanceInBefore[i]) {
-          revert InsufficientBalanceInAfterPayment();
+          revert InsufficientBalanceInAfterPayment("33333");
         }
       }
     }
@@ -290,11 +177,11 @@ contract UnusPayRouterV2 is Ownable2Step {
       // Ensure balances of tokenOut remained
       if (payment.toTokens[i].tokenAddress == NATIVE) {
         if (address(this).balance < balanceOutBefore[i]) {
-          revert InsufficientBalanceOutAfterPayment();
+          revert InsufficientBalanceOutAfterPayment("44444");
         }
       } else {
         if (IERC20(payment.toTokens[i].tokenAddress).balanceOf(address(this)) < balanceOutBefore[i]) {
-          revert InsufficientBalanceOutAfterPayment();
+          revert InsufficientBalanceOutAfterPayment("55555");
         }
       }
     }
@@ -304,13 +191,13 @@ contract UnusPayRouterV2 is Ownable2Step {
   /// @param payment The payment data.
   function _convert(IUnusPayRouterV2.Payment calldata payment) internal {
     if (!exchanges[payment.exchangeAddress]) {
-      revert ExchangeNotApproved();
+      revert ExchangeNotApproved("66666");
     }
     for (uint i = 0; i < payment.fromTokens.length; i++) {
       bool success;
       if (payment.fromTokens[i].tokenAddress == NATIVE) {
         if (payment.fromTokens[i].exchangeCallData.length == 0) {
-          revert ExchangeCallMissing();
+          revert ExchangeCallMissing("77777");
         }
         (success, ) = payment.exchangeAddress.call{value: msg.value}(payment.fromTokens[i].exchangeCallData);
       } else {
@@ -331,7 +218,7 @@ contract UnusPayRouterV2 is Ownable2Step {
         }
       }
       if (!success) {
-        revert ExchangeCallFailed();
+        revert ExchangeCallFailed("88888");
       }
     }
   }
@@ -339,34 +226,16 @@ contract UnusPayRouterV2 is Ownable2Step {
   /// @dev Processes payment to receiver.
   /// @param payment The payment data.
   function _payReceiver(IUnusPayRouterV2.Payment calldata payment) internal {
-    if (payment.receiverType != 0) {
-      // call receiver contract
-
-      {
-        for (uint i = 0; i < payment.toTokens.length; i++) {
-          bool success;
-          if (payment.toTokens[i].tokenAddress == NATIVE) {
-            success = IUnusPayForwarderV2(FORWARDER).forward{value: payment.toTokens[i].amount}(payment);
-            emit InternalTransfer(msg.sender, payment.paymentReceiverAddress, payment.toTokens[i].amount);
-          } else {
-            IERC20(payment.toTokens[i].tokenAddress).safeTransfer(FORWARDER, payment.toTokens[i].amount);
-            success = IUnusPayForwarderV2(FORWARDER).forward(payment);
-          }
-          if (!success) {
-            revert ForwardingPaymentFailed();
-          }
-        }
-      }
-    } else {
+   
       // just send payment to address
       for (uint i = 0; i < payment.toTokens.length; i++) {
         if (payment.toTokens[i].tokenAddress == NATIVE) {
           if (payment.paymentReceiverAddress == address(0)) {
-            revert PaymentToZeroAddressNotAllowed();
+            revert PaymentToZeroAddressNotAllowed("10101010");
           }
           (bool success, ) = payment.paymentReceiverAddress.call{value: payment.toTokens[i].amount}(new bytes(0));
           if (!success) {
-            revert NativePaymentFailed();
+            revert NativePaymentFailed("1212121212");
           }
           emit InternalTransfer(msg.sender, payment.paymentReceiverAddress, payment.toTokens[i].amount);
         } else {
@@ -376,7 +245,7 @@ contract UnusPayRouterV2 is Ownable2Step {
           );
         }
       }
-    }
+    
   }
 
   /// @dev Processes fee payments.
@@ -386,7 +255,7 @@ contract UnusPayRouterV2 is Ownable2Step {
       if (payment.toTokens[i].tokenAddress == NATIVE) {
         (bool success, ) = payment.feeReceiverAddress.call{value: payment.toTokens[i].feeAmount}(new bytes(0));
         if (!success) {
-          revert NativeFeePaymentFailed();
+          revert NativeFeePaymentFailed("13131313");
         }
         emit InternalTransfer(msg.sender, payment.feeReceiverAddress, payment.toTokens[i].feeAmount);
       } else {
