@@ -1,4 +1,4 @@
-// Dependency file: D:\dev\depay\unuspay-evm-router\node_modules\@openzeppelin\contracts\utils\Context.sol
+// Dependency file: C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\utils\Context.sol
 
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts v4.4.1 (utils/Context.sol)
@@ -26,13 +26,13 @@ abstract contract Context {
 }
 
 
-// Dependency file: D:\dev\depay\unuspay-evm-router\node_modules\@openzeppelin\contracts\access\Ownable.sol
+// Dependency file: C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\access\Ownable.sol
 
 // OpenZeppelin Contracts (last updated v4.9.0) (access/Ownable.sol)
 
 // pragma solidity ^0.8.0;
 
-// import "D:\dev\depay\unuspay-evm-router\node_modules\@openzeppelin\contracts\utils\Context.sol";
+// import "C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\utils\Context.sol";
 
 /**
  * @dev Contract module which provides a basic access control mechanism, where
@@ -112,13 +112,13 @@ abstract contract Ownable is Context {
 }
 
 
-// Dependency file: D:\dev\depay\unuspay-evm-router\node_modules\@openzeppelin\contracts\access\Ownable2Step.sol
+// Dependency file: C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\access\Ownable2Step.sol
 
 // OpenZeppelin Contracts (last updated v4.9.0) (access/Ownable2Step.sol)
 
 // pragma solidity ^0.8.0;
 
-// import "D:\dev\depay\unuspay-evm-router\node_modules\@openzeppelin\contracts\access\Ownable.sol";
+// import "C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\access\Ownable.sol";
 
 /**
  * @dev Contract module which provides access control mechanism, where
@@ -172,7 +172,7 @@ abstract contract Ownable2Step is Ownable {
 }
 
 
-// Dependency file: D:\dev\depay\unuspay-evm-router\node_modules\@openzeppelin\contracts\token\ERC20\IERC20.sol
+// Dependency file: C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\token\ERC20\IERC20.sol
 
 // OpenZeppelin Contracts (last updated v4.9.0) (token/ERC20/IERC20.sol)
 
@@ -253,7 +253,7 @@ interface IERC20 {
 }
 
 
-// Dependency file: D:\dev\depay\unuspay-evm-router\node_modules\@openzeppelin\contracts\token\ERC20\extensions\IERC20Permit.sol
+// Dependency file: C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\token\ERC20\extensions\IERC20Permit.sol
 
 // OpenZeppelin Contracts (last updated v4.9.0) (token/ERC20/extensions/IERC20Permit.sol)
 
@@ -316,7 +316,7 @@ interface IERC20Permit {
 }
 
 
-// Dependency file: D:\dev\depay\unuspay-evm-router\node_modules\@openzeppelin\contracts\utils\Address.sol
+// Dependency file: C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\utils\Address.sol
 
 // OpenZeppelin Contracts (last updated v4.9.0) (utils/Address.sol)
 
@@ -563,15 +563,15 @@ library Address {
 }
 
 
-// Dependency file: D:\dev\depay\unuspay-evm-router\node_modules\@openzeppelin\contracts\token\ERC20\utils\SafeERC20.sol
+// Dependency file: C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\token\ERC20\utils\SafeERC20.sol
 
 // OpenZeppelin Contracts (last updated v4.9.3) (token/ERC20/utils/SafeERC20.sol)
 
 // pragma solidity ^0.8.0;
 
-// import "D:\dev\depay\unuspay-evm-router\node_modules\@openzeppelin\contracts\token\ERC20\IERC20.sol";
-// import "D:\dev\depay\unuspay-evm-router\node_modules\@openzeppelin\contracts\token\ERC20\extensions\IERC20Permit.sol";
-// import "D:\dev\depay\unuspay-evm-router\node_modules\@openzeppelin\contracts\utils\Address.sol";
+// import "C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\token\ERC20\IERC20.sol";
+// import "C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\token\ERC20\extensions\IERC20Permit.sol";
+// import "C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\utils\Address.sol";
 
 /**
  * @title SafeERC20
@@ -815,8 +815,8 @@ interface IUnusPayRouterV2 {
 
 pragma solidity 0.8.18;
 
-// import 'D:\dev\depay\unuspay-evm-router\node_modules\@openzeppelin\contracts\access\Ownable2Step.sol';
-// import 'D:\dev\depay\unuspay-evm-router\node_modules\@openzeppelin\contracts\token\ERC20\utils\SafeERC20.sol';
+// import 'C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\access\Ownable2Step.sol';
+// import 'C:\Users\xiecan\dev\depay\depay-evm-router\node_modules\@openzeppelin\contracts\token\ERC20\utils\SafeERC20.sol';
 // import 'contracts\interfaces\IPermit2.sol';
 // import 'contracts\interfaces\IUnusPayRouterV2.sol';
 
@@ -862,12 +862,12 @@ contract UnusPayRouterV2 is Ownable2Step {
   /// @param payment The payment data.
   /// @return Returns true if successful.
   function _pay(IUnusPayRouterV2.Payment calldata payment) internal returns (bool) {
-    uint256[] memory balanceInBefore;
-    uint256[] memory balanceOutBefore;
+    uint256[] memory balanceInBefore = new uint256[](payment.fromTokens.length);
+    uint256[] memory balanceOutBefore  = new uint256[](payment.toTokens.length);
     emit Step(1);
-    balanceInBefore = _validatePreConditionsTokenIn(payment);
+    _validatePreConditionsTokenIn(payment,balanceInBefore);
      emit Step(2);
-    balanceOutBefore = _validatePreConditionsTokenOut(payment);
+    _validatePreConditionsTokenOut(payment,balanceOutBefore);
      emit Step(3);
     _payIn(payment);
      emit Step(4);
@@ -888,11 +888,11 @@ emit Step(9);
 
   /// @dev Validates the pre-conditions for a payment.
   /// @param payment The payment data.
-  /// @return balanceInBefore The balance in before the payment.
+  /// @param balanceInBefore The balance in before the payment.
   function _validatePreConditionsTokenIn(
-    IUnusPayRouterV2.Payment calldata payment
-  ) internal returns (uint256[] memory) {
-    uint256[] memory balanceInBefore;
+    IUnusPayRouterV2.Payment calldata payment,uint256[] memory balanceInBefore
+  ) internal {
+    
     for (uint i = 0; i < payment.fromTokens.length; i++) {
       // Store tokenIn balance prior to payment
       if (payment.fromTokens[i].tokenAddress == NATIVE) {
@@ -901,17 +901,16 @@ emit Step(9);
         balanceInBefore[i] = IERC20(payment.fromTokens[i].tokenAddress).balanceOf(address(this));
       }
     }
-    return balanceInBefore;
+    
   }
 
   /// @dev Validates the pre-conditions for a payment.
   /// @param payment The payment data.
-  /// @return balanceOutBefore The balance out before the payment.
+  /// @param balanceOutBefore The balance out before the payment.
   function _validatePreConditionsTokenOut(
-    IUnusPayRouterV2.Payment calldata payment
-  ) internal returns (uint256[] memory) {
-    // Store tokenOut balance prior to payment
-    uint256[] memory balanceOutBefore;
+    IUnusPayRouterV2.Payment calldata payment,uint256[] memory balanceOutBefore
+  ) internal{
+    
     for (uint i = 0; i < payment.toTokens.length; i++) {
       // Store tokenIn balance prior to payment
       if (payment.toTokens[i].tokenAddress == NATIVE) {
@@ -920,7 +919,7 @@ emit Step(9);
         balanceOutBefore[i] = IERC20(payment.toTokens[i].tokenAddress).balanceOf(address(this));
       }
     }
-    return balanceOutBefore;
+    
   }
 
  
