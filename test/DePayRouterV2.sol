@@ -2,12 +2,12 @@
 pragma solidity ^0.8.13;
 
 import {Test, console2} from "forge-std/Test.sol";
-import {UnusPayForwarderV2} from "../contracts/UnusPayForwarderV2.sol";
-import {UnusPayRouterV2} from "../contracts/UnusPayRouterV2.sol";
+import {UnusPayForwarder} from "../contracts/UnusPayForwarderV2.sol";
+import {UnusPayRouter} from "../contracts/UnusPayRouterV2.sol";
 
 contract UnusPayRouterV2Test is Test {
-    UnusPayForwarderV2 public forwarder;
-    UnusPayRouterV2 public router;
+    UnusPayForwarder public forwarder;
+    UnusPayRouter public router;
 
     function setUp() public {
         forwarder = new UnusPayForwarderV2();

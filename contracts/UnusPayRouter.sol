@@ -5,12 +5,12 @@ pragma solidity 0.8.18;
 import '@openzeppelin/contracts/access/Ownable2Step.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import './interfaces/IPermit2.sol';
-import './interfaces/IUnusPayRouterV2.sol';
+import './interfaces/IUnusPayRouter.sol';
 
-/// @title UnusPayRouterV2
+/// @title UnusPayRouter
 /// @notice This contract handles payments and token conversions.
 /// @dev Inherit from Ownable2Step for ownership functionalities.
-contract UnusPayRouterV2 is Ownable2Step {
+contract UnusPayRouter is Ownable2Step {
     using SafeERC20 for IERC20;
 
     // Custom errors
@@ -28,7 +28,7 @@ contract UnusPayRouterV2 is Ownable2Step {
     error InsufficientBalanceOutAfterPayment(string msg);
 
     /// @notice Address representing the NATIVE token (e.g. ETH, BNB, MATIC, etc.)
-    address constant NATIVE = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    address private constant NATIVE = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     /// @notice List of approved exchanges for conversion.
     mapping(address => bool) public exchanges;
@@ -45,10 +45,22 @@ contract UnusPayRouterV2 is Ownable2Step {
     event InternalTransfer(address indexed from, address indexed to, uint256 value);
     event Step(uint32 step);
 
+
+
+    /// @notice Handles the payment process for external callers.
+    /// @param payment The payment data.
+    /// @return Returns true if successful.
+    function pay(IUnusPayRouter.Payment calldata payment) external payable returns (bool) {
+        return _pay(payment);
+    }
+    function convert(IUnusPayRouter.FromToken[] calldata payment) external payable  {
+          _convert(payment);
+    }
+
     /// @dev Handles the payment process (tokenIn approval has been granted prior).
     /// @param payment The payment data.
     /// @return Returns true if successful.
-    function _pay(IUnusPayRouterV2.Payment calldata payment) internal returns (bool) {
+    function _pay(IUnusPayRouter.Payment calldata payment) internal returns (bool) {
         uint256[] memory balanceInBefore = new uint256[](payment.fromTokens.length);
         uint256[] memory balanceOutBefore = new uint256[](payment.toTokens.length);
         emit Step(1);
@@ -65,37 +77,11 @@ contract UnusPayRouterV2 is Ownable2Step {
         return true;
     }
 
-    function _subAndPay(IUnusPayRouterV2.SubAndPayment calldata payment) internal returns (bool) {
-        if (payment.tokens.length==0) {
-            revert WrongTokens;
-        }
-        uint256 balanceInBefore=   _validatePreTokenBalance(payment.tokens[0]);
-
-        emit Step(2);
-        emit Step(3);
-        _payIn(payment.tokens[0], payment.amount);
-        emit Step(4);
-        _performPayment(payment);
-        emit Step(8);
-        _validatePostTokenBalance(payment.tokens[0],balanceInBefore);
-        emit Step(9);
-        return true;
-    }
-
-
-
-    /// @notice Handles the payment process for external callers.
-    /// @param payment The payment data.
-    /// @return Returns true if successful.
-    function pay(IUnusPayRouterV2.Payment calldata payment) external payable returns (bool) {
-        return _pay(payment);
-    }
 
     /// @dev Validates the pre-conditions for a payment.
     /// @param payment The payment data.
-    /// @return balanceInBefore The balance in before the payment.
     function _validatePreConditionsTokenIn(
-        IUnusPayRouterV2.Payment calldata payment, uint256[] memory balanceInBefore
+        IUnusPayRouter.Payment calldata payment, uint256[] memory balanceInBefore
     ) internal {
 
         for (uint i = 0; i < payment.fromTokens.length; i++) {
@@ -109,12 +95,10 @@ contract UnusPayRouterV2 is Ownable2Step {
 
     }
 
-
     /// @dev Validates the pre-conditions for a payment.
     /// @param payment The payment data.
-    /// @return balanceOutBefore The balance out before the payment.
     function _validatePreConditionsTokenOut(
-        IUnusPayRouterV2.Payment calldata payment, uint256[] memory balanceOutBefore
+        IUnusPayRouter.Payment calldata payment, uint256[] memory balanceOutBefore
     ) internal {
 
         for (uint i = 0; i < payment.toTokens.length; i++) {
@@ -128,22 +112,11 @@ contract UnusPayRouterV2 is Ownable2Step {
 
     }
 
-    function _validatePreTokenBalance(
-        address token
-    )  internal returns (uint256) {
 
-        // Store tokenIn balance prior to payment
-        if (token == NATIVE) {
-            return address(this).balance - msg.value;
-        } else {
-            return IERC20(token).balanceOf(address(this));
-        }
-
-    }
 
     /// @dev Processes the payIn operations.
     /// @param payment The payment data.
-    function _payIn(IUnusPayRouterV2.Payment calldata payment) internal {
+    function _payIn(IUnusPayRouter.Payment calldata payment) internal {
         for (uint i = 0; i < payment.fromTokens.length; i++) {
             if (payment.fromTokens[i].tokenAddress == NATIVE) {
                 // Make sure that the sender has paid in the correct token & amount
@@ -159,29 +132,27 @@ contract UnusPayRouterV2 is Ownable2Step {
             }
         }
     }
-    function _payIn(address token,uint256 amount) internal {
-            if (token == NATIVE) {
-                // Make sure that the sender has paid in the correct token & amount
-                if (msg.value != amount) {
-                    revert WrongAmountPaidIn("11111");
-                }
-            } else {
-                IERC20(token).safeTransferFrom(
-                    msg.sender,
-                    address(this),
-                    amount
-                );
+
+    function _payIn(address token, uint256 amount) internal {
+        if (token == NATIVE) {
+            // Make sure that the sender has paid in the correct token & amount
+            if (msg.value != amount) {
+                revert WrongAmountPaidIn("11111");
             }
+        } else {
+            IERC20(token).safeTransferFrom(
+                msg.sender,
+                address(this),
+                amount
+            );
+        }
     }
 
     /// @dev Processes the payment.
     /// @param payment The payment data.
-    function _performPayment(IUnusPayRouterV2.Payment calldata payment) internal {
+    function _performPayment(IUnusPayRouter.Payment calldata payment) internal {
         // Perform conversion if required
-        if (payment.exchangeAddress != address(0)) {
-            emit Step(5);
-            _convert(payment);
-        }
+        _convert(payment.fromTokens);
         // Perform payment to paymentReceiver
         emit Step(6);
         _payReceiver(payment);
@@ -198,7 +169,7 @@ contract UnusPayRouterV2 is Ownable2Step {
     /// @param balanceInBefore The balance in before the payment.
     /// @param balanceOutBefore The balance out before the payment.
     function _validatePostConditions(
-        IUnusPayRouterV2.Payment calldata payment,
+        IUnusPayRouter.Payment calldata payment,
         uint256[] memory balanceInBefore,
         uint256[] memory balanceOutBefore
     ) internal view {
@@ -228,52 +199,36 @@ contract UnusPayRouterV2 is Ownable2Step {
         }
     }
 
-    function _validatePostTokenBalance(
-        address memory token,
-        uint256 memory balanceInBefore
-    ) internal view {
-        // Ensure balances of tokenIn remained
-            if (token == NATIVE) {
-                if (address(this).balance < balanceInBefore[i]) {
-                    revert InsufficientBalanceInAfterPayment("22222");
-                }
-            } else {
-                if (IERC20(token).balanceOf(address(this)) < balanceInBefore[i]) {
-                    revert InsufficientBalanceInAfterPayment("33333");
-                }
+
+
+    function _convert(IUnusPayRouter.FromToken[] calldata  fromTokens) internal {
+
+        for (uint i = 0; i < fromTokens.length; i++) {
+
+            if (!exchanges[fromTokens[i].exchangeAddress]) {
+                revert ExchangeNotApproved("66666");
             }
-
-    }
-
-
-    /// @dev Handles token conversions.
-    /// @param payment The payment data.
-    function _convert(IUnusPayRouterV2.Payment calldata payment) internal {
-        if (!exchanges[payment.exchangeAddress]) {
-            revert ExchangeNotApproved("66666");
-        }
-        for (uint i = 0; i < payment.fromTokens.length; i++) {
             bool success;
-            if (payment.fromTokens[i].tokenAddress == NATIVE) {
-                if (payment.fromTokens[i].exchangeCallData.length == 0) {
+            if (fromTokens[i].tokenAddress == NATIVE) {
+                if (fromTokens[i].exchangeCallData.length == 0) {
                     revert ExchangeCallMissing("77777");
                 }
-                (success,) = payment.exchangeAddress.call{value: msg.value}(payment.fromTokens[i].exchangeCallData);
+                (success,) = fromTokens[i].exchangeAddress.call{value: msg.value}(fromTokens[i].exchangeCallData);
             } else {
-                if (payment.exchangeType == 1) {
+                if (fromTokens[i].exchangeType == 1) {
                     // pull
-                    IERC20(payment.fromTokens[i].tokenAddress).safeApprove(payment.exchangeAddress, payment.fromTokens[i].amount);
-                } else if (payment.exchangeType == 2) {
+                    IERC20(fromTokens[i].tokenAddress).safeApprove(fromTokens[i].exchangeAddress, fromTokens[i].amount);
+                } else if (fromTokens[i].exchangeType == 2) {
                     // push
-                    IERC20(payment.fromTokens[i].tokenAddress).safeTransfer(
-                        payment.exchangeAddress,
-                        payment.fromTokens[i].amount
+                    IERC20(fromTokens[i].tokenAddress).safeTransfer(
+                        fromTokens[i].exchangeAddress,
+                        fromTokens[i].amount
                     );
                 }
-                (success,) = payment.exchangeAddress.call(payment.fromTokens[i].exchangeCallData);
-                if (payment.exchangeType == 1) {
+                (success,) = fromTokens[i].exchangeAddress.call(fromTokens[i].exchangeCallData);
+                if (fromTokens[i].exchangeType == 1) {
                     // pull
-                    IERC20(payment.fromTokens[i].tokenAddress).safeApprove(payment.exchangeAddress, 0);
+                    IERC20(fromTokens[i].tokenAddress).safeApprove(fromTokens[i].exchangeAddress, 0);
                 }
             }
             if (!success) {
@@ -284,7 +239,7 @@ contract UnusPayRouterV2 is Ownable2Step {
 
     /// @dev Processes payment to receiver.
     /// @param payment The payment data.
-    function _payReceiver(IUnusPayRouterV2.Payment calldata payment) internal {
+    function _payReceiver(IUnusPayRouter.Payment calldata payment) internal {
 
         // just send payment to address
         for (uint i = 0; i < payment.toTokens.length; i++) {
@@ -309,7 +264,7 @@ contract UnusPayRouterV2 is Ownable2Step {
 
     /// @dev Processes fee payments.
     /// @param payment The payment data.
-    function _payFee(IUnusPayRouterV2.Payment calldata payment) internal {
+    function _payFee(IUnusPayRouter.Payment calldata payment) internal {
         for (uint i = 0; i < payment.toTokens.length; i++) {
             if (payment.toTokens[i].tokenAddress == NATIVE) {
                 (bool success,) = payment.feeReceiverAddress.call{value: payment.toTokens[i].feeAmount}(new bytes(0));

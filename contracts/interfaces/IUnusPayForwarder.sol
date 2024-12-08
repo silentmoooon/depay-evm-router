@@ -2,12 +2,12 @@
 
 pragma solidity 0.8.18;
 
-import './IUnusPayRouterV2.sol';
+import './IUnusPayRouter.sol';
 
-interface IUnusPayForwarderV2 {
+interface IUnusPayForwarder {
 
   function forward(
-    IUnusPayRouterV2.Payment calldata payment
+    IUnusPayRouter.Payment calldata payment
   ) external payable returns(bool);
 
   function toggle(bool stop) external returns(bool);

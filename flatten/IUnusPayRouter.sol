@@ -46,55 +46,58 @@ interface IPermit2 {
 }
 
 
-// Root file: contracts\interfaces\IUnusPayRouterV2.sol
+// Root file: contracts\interfaces\IUnusPayRouter.sol
 
 
 pragma solidity 0.8.18;
 
 // import 'contracts\interfaces\IPermit2.sol';
 
-interface IUnusPayRouterV2 {
- struct FromToken{
-    address tokenAddress;
-    uint256 amount;
-    bytes exchangeCallData;
-    address swapTokenAddress;
-    uint256 swapAmount;
- }
- struct ToToken{
-    address tokenAddress;
-    uint256 amount;
-    uint256 feeAmount;
- }
-  struct Payment {
-    bool permit2;
-    FromToken[] fromTokens;
-    address exchangeAddress;
-    ToToken[] toTokens;
-    address paymentReceiverAddress;
-    address feeReceiverAddress;
-    uint8 exchangeType;
-    uint8 receiverType;
-    bytes receiverCallData;
-    uint256 deadline;
-  }
+interface IUnusPayRouter {
+    struct FromToken {
+        address tokenAddress;
+        uint256 amount;
+        address swapTokenAddress;
+        uint256 swapAmount;
+        address exchangeAddress;
+        bytes exchangeCallData;
+        uint8 exchangeType;
+    }
 
- 
 
-  function pay(
-    Payment calldata payment
-  ) external payable returns(bool);
- 
-  event Enabled(
-    address indexed exchange
-  );
+    struct ToToken {
+        address tokenAddress;
+        uint256 amount;
+        uint256 feeAmount;
+    }
 
-  event Disabled(
-    address indexed exchange
-  );
+    struct Payment {
+        FromToken[] fromTokens;
+        ToToken[] toTokens;
+        address paymentReceiverAddress;
+        address feeReceiverAddress;
+        uint256 deadline;
+    }
 
-  function enable(address exchange, bool enabled) external returns(bool);
 
-  function withdraw(address token, uint amount) external returns(bool);
+
+
+    function pay(
+        Payment calldata payment
+    ) external payable returns (bool);
+
+    function convert(IUnusPayRouter.FromToken[] calldata payment) external payable returns (bool);
+
+    event Enabled(
+        address indexed exchange
+    );
+
+    event Disabled(
+        address indexed exchange
+    );
+
+    function enable(address exchange, bool enabled) external returns (bool);
+
+    function withdraw(address token, uint amount) external returns (bool);
 
 }

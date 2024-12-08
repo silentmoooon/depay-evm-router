@@ -1,12 +1,27 @@
+// Dependency file: contracts\interfaces\IWETH.sol
+
 // SPDX-License-Identifier: MIT
+
+// pragma solidity 0.8.18;
+
+interface IWETH {
+
+  function deposit() payable external;
+  function transfer(address dst, uint wad) external returns (bool);
+  function withdraw(uint wad) external;
+}
+
+
+// Root file: contracts\UnusPayWETHExchange.sol
+
 
 pragma solidity 0.8.18;
 
-import './interfaces/IWETH.sol';
+// import 'contracts\interfaces\IWETH.sol';
 
 /// @title UnusPayWETHExchangeV1
 /// @notice This contract limits access to WETH to the functions wrap & unwrap only.
-contract UnusPayWETHExchangeV1 {
+contract UnusPayWETHExchange {
 
   /// @notice Address of WETH
   IWETH public immutable WETH;

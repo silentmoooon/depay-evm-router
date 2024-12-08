@@ -2,18 +2,10 @@
 
 pragma solidity 0.8.18;
 
-import './IPermit2.sol';
+import './IUnusPayRouter.sol';
 
-interface IUnusPayRouterV2 {
-    struct FromToken {
-        address tokenAddress;
-        uint256 amount;
-        address swapTokenAddress;
-        uint256 swapAmount;
-        address exchangeAddress;
-        bytes exchangeCallData;
-        uint8 exchangeType;
-    }
+interface IUnusPaySubscription {
+
 
     struct SubToken {
         address tokenAddress;
@@ -26,27 +18,41 @@ interface IUnusPayRouterV2 {
         uint256 feeAmount;
     }
 
-    struct Payment {
-        FromToken[] fromTokens;
-        ToToken[] toTokens;
-        address paymentReceiverAddress;
-        address feeReceiverAddress;
-        uint256 deadline;
-    }
-
     struct SubAndPayment {
-        address[] tokens;
-        //第一个token支付的金额
-        uint256 amount;
+        string orderNo;
+        SubscriptionInfo subInfo;
+        IUnusPayRouter.FromToken fromToken;
+        uint256 payAmount;
+        uint256 feeAmount;
         address paymentReceiverAddress;
         address feeReceiverAddress;
         uint256 deadline;
     }
 
+    struct SubPayment {
+        address fromAddress;
+        string orderNo;
+        uint256 nextPayTime;
+        IUnusPayRouter.FromToken fromToken;
+        uint256 payAmount;
+        uint256 feeAmount;
+        address paymentReceiverAddress;
+        address feeReceiverAddress;
+        uint256 deadline;
+    }
 
-    function pay(
-        Payment calldata payment
-    ) external payable returns (bool);
+    struct SubscriptionInfo {
+        //周期类型  1:分钟 2:小时 3:天 4:周 5:月 6:年
+        uint32 plan;
+        //订阅期数,0为永久
+        uint32 instalments;
+        //剩余订阅期数
+        uint32 remaining;
+        //下期最早支付时间
+        uint256 nextPayTime;
+
+    }
+
     //订阅并支付
     function subAndPay(
         SubAndPayment calldata payment
