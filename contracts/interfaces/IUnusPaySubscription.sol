@@ -18,21 +18,15 @@ interface IUnusPaySubscription {
         uint256 feeAmount;
     }
 
-    struct SubAndPayment {
-        string orderNo;
-        SubscriptionInfo subInfo;
-        IUnusPayRouter.FromToken fromToken;
-        uint256 payAmount;
-        uint256 feeAmount;
-        address paymentReceiverAddress;
-        address feeReceiverAddress;
-        uint256 deadline;
-    }
-
     struct SubPayment {
+        //用户订阅时不填,商户自动扣款时填
         address fromAddress;
+        //订阅订单号
         string orderNo;
-        uint256 nextPayTime;
+        //周期类型  2:小时 3:天 4:周 5:月 6:年
+        uint32 plan;
+        //订阅期数,0为永久
+        uint32 instalments;
         IUnusPayRouter.FromToken fromToken;
         uint256 payAmount;
         uint256 feeAmount;
@@ -42,25 +36,25 @@ interface IUnusPaySubscription {
     }
 
     struct SubscriptionInfo {
-        //周期类型  1:分钟 2:小时 3:天 4:周 5:月 6:年
+        //周期类型  2:小时 3:天 4:周 5:月 6:年
         uint32 plan;
         //订阅期数,0为永久
         uint32 instalments;
         //剩余订阅期数
         uint32 remaining;
-        //下期最早支付时间
-        uint256 nextPayTime;
+        //上次支付时间
+        uint256 lastPayTime;
 
     }
 
     //订阅并支付
     function subAndPay(
-        SubAndPayment calldata payment
+        SubPayment calldata payment
     ) external payable returns (bool);
 
     //订阅后支付
     function subPay(
-        SubAndPayment calldata payment
+        SubPayment calldata payment
     ) external payable returns (bool);
 
     event Enabled(

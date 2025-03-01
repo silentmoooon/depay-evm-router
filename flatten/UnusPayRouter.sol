@@ -949,20 +949,6 @@ contract UnusPayRouter is Ownable2Step {
         }
     }
 
-    function _payIn(address token, uint256 amount) internal {
-        if (token == NATIVE) {
-            // Make sure that the sender has paid in the correct token & amount
-            if (msg.value != amount) {
-                revert WrongAmountPaidIn("11111");
-            }
-        } else {
-            IERC20(token).safeTransferFrom(
-                msg.sender,
-                address(this),
-                amount
-            );
-        }
-    }
 
     /// @dev Processes the payment.
     /// @param payment The payment data.

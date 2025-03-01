@@ -15,22 +15,22 @@ contract UnusPaySubscription is Ownable2Step {
     using SafeERC20 for IERC20;
 
     // Custom errors
-    error PaymentDeadlineReached(string msg);
-    error WrongAmountPaidIn(string msg);
+    error PaymentDeadlineReached();
+    error WrongAmountPaidIn();
     error WrongTokens();
     error InvalidPlan();
     error NotSubscribed();
     error NotTimeYet();
     error WrongNextPayTime();
-    error ExchangeNotApproved(string msg);
-    error ExchangeCallMissing(string msg);
-    error ExchangeCallFailed(string msg);
-    error ForwardingPaymentFailed(string msg);
-    error NativePaymentFailed(string msg);
-    error NativeFeePaymentFailed(string msg);
-    error PaymentToZeroAddressNotAllowed(string msg);
-    error InsufficientBalanceInAfterPayment(string msg);
-    error InsufficientBalanceOutAfterPayment(string msg);
+    error ExchangeNotApproved();
+    error ExchangeCallMissing();
+    error ExchangeCallFailed();
+    error ForwardingPaymentFailed();
+    error NativePaymentFailed();
+    error NativeFeePaymentFailed();
+    error PaymentToZeroAddressNotAllowed();
+    error InsufficientBalanceInAfterPayment();
+    error InsufficientBalanceOutAfterPayment();
 
     /// @notice Address representing the NATIVE token (e.g. ETH, BNB, MATIC, etc.)
     address private  constant NATIVE = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
@@ -48,10 +48,10 @@ contract UnusPaySubscription is Ownable2Step {
 
     /// @dev Transfer polyfil event for internal transfers.
     event InternalTransfer(address indexed from, address indexed to, uint256 value);
-    event SubscriptionCreated(address indexed from, string orderNo, uint32 plan, uint32 instalments, uint32 remaining, uint256 nextPayTime);
+    event SubscriptionCreated(address indexed from, string orderNo, uint32 plan, uint32 instalments);
     event Step(uint32 step);
 
-    function subAndPay(IUnusPaySubscription.SubAndPayment calldata payment) external payable returns (bool) {
+    function subAndPay(IUnusPaySubscription.SubPayment calldata payment) external payable returns (bool) {
         return _subAndPay(payment);
     }
 
@@ -59,25 +59,29 @@ contract UnusPaySubscription is Ownable2Step {
         return _subPay(payment);
     }
 
-    function subInfo(string calldata orderNo) external payable returns (IUnusPaySubscription.SubscriptionInfo) {
+    function subInfo(string calldata orderNo) external returns (IUnusPaySubscription.SubscriptionInfo memory) {
         bytes memory addressAndOrder = abi.encodePacked(msg.sender, orderNo);
         return subscriptions[addressAndOrder];
     }
 
 
-    function _subAndPay(IUnusPaySubscription.SubAndPayment calldata payment) internal returns (bool) {
+    function _subAndPay(IUnusPaySubscription.SubPayment calldata payment) internal returns (bool) {
+
+        if (payment.deadline < block.timestamp) {
+            revert PaymentDeadlineReached();
+        }
 
         uint256 balanceInBefore;
         uint256 balanceOutBefore;
-        (balanceInBefore, balanceOutBefore) = _validatePreConditions(payment);
+        (balanceInBefore, balanceOutBefore) = _validatePreConditions(payment.fromToken);
 
         emit Step(2);
         emit Step(3);
-        _payIn(payment);
+        _payIn(payment.fromToken);
         emit Step(4);
         _performPayment(payment);
         emit Step(8);
-        _validatePostConditions(payment, balanceInBefore, balanceOutBefore);
+        _validatePostConditions(payment.fromToken, balanceInBefore, balanceOutBefore);
 
         emit Step(9);
         _saveSubInfo(payment);
@@ -85,126 +89,131 @@ contract UnusPaySubscription is Ownable2Step {
     }
 
     function _subPay(IUnusPaySubscription.SubPayment calldata payment) internal returns (bool) {
+        if (payment.deadline < block.timestamp) {
+            revert PaymentDeadlineReached();
+        }
         bytes memory addressAndOrder = abi.encodePacked(msg.sender, payment.orderNo);
         IUnusPaySubscription.SubscriptionInfo memory subInfo = subscriptions[addressAndOrder];
-        if (subInfo == address(0)) {
+        if (subInfo.plan == 0) {
             revert NotSubscribed();
         }
         if (subInfo.plan == 2) {
-            if (subInfo.nextPayTime - block.timestamp > 60 * 10) {
+            //小时级订阅,支付时间最少要在上次支付的50分钟之后
+            if (block.timestamp - subInfo.lastPayTime < 60 * 50) {
                 revert NotTimeYet();
             }
-            if (subInfo.remaining != 1 && payment.nextPayTime - subInfo.nextPayTime < 3600 * 1) {
-                revert WrongNextPayTime();
-            }
+
         } else if (subInfo.plan == 3) {
-            if (subInfo.nextPayTime - block.timestamp > 3600 * 2) {
+            //天级订阅,支付时间最少要在上次支付的20小时之后
+            if (block.timestamp - subInfo.lastPayTime < 3600 * 20) {
                 revert NotTimeYet();
             }
-            if (subInfo.remaining != 1 && payment.nextPayTime - subInfo.nextPayTime < 3600 * 24) {
-                revert WrongNextPayTime();
-            }
+
 
         } else if (subInfo.plan == 4) {
-            if (subInfo.nextPayTime - block.timestamp > 3600 * 24 * 2) {
+            //周级订阅,支付时间最少要在上次支付的5天之后
+            if (block.timestamp - subInfo.lastPayTime < 3600 * 24 * 5) {
                 revert NotTimeYet();
-            }
-            if (subInfo.remaining != 1 && payment.nextPayTime - subInfo.nextPayTime < 3600 * 24 * 7) {
-                revert WrongNextPayTime();
             }
 
+
         } else if (subInfo.plan == 5) {
-            if (subInfo.nextPayTime - block.timestamp > 3600 * 24 * 10) {
+            //月级订阅,支付时间最少要在上次支付的25天之后
+            if (block.timestamp - subInfo.lastPayTime < 3600 * 24 * 25) {
                 revert NotTimeYet();
             }
-            if (subInfo.remaining != 1 && payment.nextPayTime - subInfo.nextPayTime < 3600 * 24 * 28) {
-                revert WrongNextPayTime();
-            }
+
         } else if (subInfo.plan == 6) {
-            if (subInfo.nextPayTime - block.timestamp > 3600 * 24 * 30) {
+            //月级订阅,支付时间最少要在上次支付的335天之后
+            if (block.timestamp - subInfo.lastPayTime < 3600 * 24 * 335) {
                 revert NotTimeYet();
             }
-            if (subInfo.remaining != 1 && payment.nextPayTime - subInfo.nextPayTime < 3600 * 24 * 365) {
-                revert WrongNextPayTime();
-            }
+
         }
         uint256 balanceInBefore;
         uint256 balanceOutBefore;
-        (balanceInBefore, balanceOutBefore) = _validatePreConditions(payment);
+        (balanceInBefore, balanceOutBefore) = _validatePreConditions(payment.fromToken);
 
         emit Step(2);
         emit Step(3);
-        _payIn(payment);
+        _payIn(payment.fromToken);
         emit Step(4);
         _performPayment(payment);
         emit Step(8);
-        _validatePostConditions(payment, balanceInBefore, balanceOutBefore);
+        _validatePostConditions(payment.fromToken, balanceInBefore, balanceOutBefore);
 
         emit Step(9);
 
 
-        if (subInfo.instalments != 0 && subInfo.remaining == 1) {
-            subscriptions[addressAndOrder] = address(0);
+        if (subInfo.remaining == 1) {
+            delete subscriptions[addressAndOrder];
         } else {
-            subInfo.remaining--;
-            subInfo.nextPayTime = payment.nextPayTime;
+            if (subInfo.instalments != 0) {
+                subInfo.remaining--;
+            }
+            subInfo.lastPayTime = block.timestamp;
+            subscriptions[addressAndOrder] = subInfo;
         }
-        subscriptions[addressAndOrder] = subInfo;
+
         return true;
     }
 
 
-    function _validatePreConditions(IUnusPaySubscription.SubAndPayment calldata payment) internal returns (uint256 balanceInBefore, uint256 balanceOutBefore) {
+    function _validatePreConditions(IUnusPayRouter.FromToken calldata fromToken) internal returns (uint256 balanceInBefore, uint256 balanceOutBefore) {
         // Make sure payment deadline has not been passed, yet
-        if (payment.deadline < block.timestamp) {
-            revert PaymentDeadlineReached();
-        }
 
         // Store tokenIn balance prior to payment
-        if (payment.fromToken.tokenAddress == NATIVE) {
+        if (fromToken.tokenAddress == NATIVE) {
             balanceInBefore = address(this).balance - msg.value;
         } else {
-            balanceInBefore = IERC20(payment.fromToken.tokenAddress).balanceOf(address(this));
+            balanceInBefore = IERC20(fromToken.tokenAddress).balanceOf(address(this));
         }
 
         // Store tokenOut balance prior to payment
-        if (payment.fromToken.swapTokenAddress == NATIVE) {
+        if (fromToken.swapTokenAddress == NATIVE) {
             balanceOutBefore = address(this).balance - msg.value;
         } else {
-            balanceOutBefore = IERC20(payment.fromToken.swapTokenAddress).balanceOf(address(this));
+            balanceOutBefore = IERC20(fromToken.swapTokenAddress).balanceOf(address(this));
         }
     }
 
-    function _validatePostConditions(IUnusPaySubscription.SubAndPayment calldata payment, uint256 balanceInBefore, uint256 balanceOutBefore) internal view {
+
+    function _validatePostConditions(IUnusPayRouter.FromToken calldata fromToken, uint256 balanceInBefore, uint256 balanceOutBefore) internal view {
         // Ensure balances of tokenIn remained
-        if (payment.fromToken.tokenAddress == NATIVE) {
+        if (fromToken.tokenAddress == NATIVE) {
             if (address(this).balance < balanceInBefore) {
                 revert InsufficientBalanceInAfterPayment();
             }
         } else {
-            if (IERC20(payment.fromToken.tokenAddress).balanceOf(address(this)) < balanceInBefore) {
+            if (IERC20(fromToken.tokenAddress).balanceOf(address(this)) < balanceInBefore) {
                 revert InsufficientBalanceInAfterPayment();
             }
         }
-        if (payment.fromToken.exchangeAddress != address(0)) {
+        if (fromToken.exchangeAddress != address(0)) {
             // Ensure balances of tokenOut remained
-            if (payment.fromToken.swapTokenAddress == NATIVE) {
+            if (fromToken.swapTokenAddress == NATIVE) {
                 if (address(this).balance < balanceOutBefore) {
                     revert InsufficientBalanceOutAfterPayment();
                 }
             } else {
-                if (IERC20(payment.fromToken.swapTokenAddress).balanceOf(address(this)) < balanceOutBefore) {
+                if (IERC20(fromToken.swapTokenAddress).balanceOf(address(this)) < balanceOutBefore) {
                     revert InsufficientBalanceOutAfterPayment();
                 }
             }
         }
     }
 
-    function _saveSubInfo(IUnusPaySubscription.SubAndPayment calldata payment) internal {
+    function _saveSubInfo(IUnusPaySubscription.SubPayment calldata payment) internal {
         // Ensure balances of tokenIn remained
         bytes memory addressAndOrder = abi.encodePacked(msg.sender, payment.orderNo);
-        subscriptions[addressAndOrder] = payment.subInfo;
-        emit SubscriptionCreated(msg.sender, payment.orderNo, payment.subInfo.plan, payment.subInfo.instalments, payment.subInfo.remaining, payment.subInfo.nextPayTime);
+        uint32 remaining = 0;
+        if (payment.instalments > 0) {
+            remaining = payment.instalments - 1;
+        }
+
+        IUnusPaySubscription.SubscriptionInfo memory subInfo = IUnusPaySubscription.SubscriptionInfo({plan: payment.plan, instalments: payment.instalments, remaining: remaining, lastPayTime: block.timestamp});
+        subscriptions[addressAndOrder] = subInfo;
+        emit SubscriptionCreated(msg.sender, payment.orderNo, payment.plan, payment.instalments);
 
     }
 
@@ -222,43 +231,30 @@ contract UnusPaySubscription is Ownable2Step {
     }
 
     /// @dev Processes the payIn operations.
-    /// @param payment The payment data.
-    function _payIn(IUnusPaySubscription.SubAndPayment calldata payment) internal {
-        if (payment.fromToken.tokenAddress == NATIVE) {
+    /// @param fromToken The payment data.
+    function _payIn(IUnusPayRouter.FromToken calldata fromToken) internal {
+        if (fromToken.tokenAddress == NATIVE) {
             // Make sure that the sender has paid in the correct token & amount
-            if (msg.value != payment.fromToken.amount) {
-                revert WrongAmountPaidIn("11111");
+            if (msg.value != fromToken.amount) {
+                revert WrongAmountPaidIn();
             }
         } else {
-            IERC20(payment.fromToken.tokenAddress).safeTransferFrom(
+            IERC20(fromToken.tokenAddress).safeTransferFrom(
                 msg.sender,
                 address(this),
-                payment.fromToken.amount
-            );
-        }
-    }
-
-    function _payIn(address token, uint256 amount) internal {
-        if (token == NATIVE) {
-            // Make sure that the sender has paid in the correct token & amount
-            if (msg.value != amount) {
-                revert WrongAmountPaidIn("11111");
-            }
-        } else {
-            IERC20(token).safeTransferFrom(
-                msg.sender,
-                address(this),
-                amount
+                fromToken.amount
             );
         }
     }
 
     /// @dev Processes the payment.
     /// @param payment The payment data.
-    function _performPayment(IUnusPaySubscription.SubAndPayment calldata payment) internal {
+    function _performPayment(IUnusPaySubscription.SubPayment calldata payment) internal {
         // Perform conversion if required
         if (payment.fromToken.exchangeAddress != address(0)) {
-            IUnusPayRouter(CONVERTER).convert([payment.fromToken]);
+            IUnusPayRouter.FromToken[] memory fromTokens;
+            fromTokens[0] = payment.fromToken;
+            IUnusPayRouter(CONVERTER).convert(fromTokens);
         }
 
         // Perform payment to paymentReceiver
@@ -274,16 +270,16 @@ contract UnusPaySubscription is Ownable2Step {
 
     /// @dev Processes payment to receiver.
     /// @param payment The payment data.
-    function _payReceiver(IUnusPaySubscription.SubAndPayment calldata payment) internal {
+    function _payReceiver(IUnusPaySubscription.SubPayment calldata payment) internal {
 
         // just send payment to address
         if (payment.fromToken.swapTokenAddress == NATIVE) {
             if (payment.paymentReceiverAddress == address(0)) {
-                revert PaymentToZeroAddressNotAllowed("10101010");
+                revert PaymentToZeroAddressNotAllowed();
             }
             (bool success,) = payment.paymentReceiverAddress.call{value: payment.payAmount}(new bytes(0));
             if (!success) {
-                revert NativePaymentFailed("1212121212");
+                revert NativePaymentFailed();
             }
             emit InternalTransfer(msg.sender, payment.paymentReceiverAddress, payment.payAmount);
         } else {
@@ -297,11 +293,11 @@ contract UnusPaySubscription is Ownable2Step {
 
     /// @dev Processes fee payments.
     /// @param payment The payment data.
-    function _payFee(IUnusPaySubscription.SubAndPayment calldata payment) internal {
+    function _payFee(IUnusPaySubscription.SubPayment calldata payment) internal {
         if (payment.fromToken.swapTokenAddress == NATIVE) {
             (bool success,) = payment.feeReceiverAddress.call{value: payment.feeAmount}(new bytes(0));
             if (!success) {
-                revert NativeFeePaymentFailed("13131313");
+                revert NativeFeePaymentFailed();
             }
             emit InternalTransfer(msg.sender, payment.feeReceiverAddress, payment.feeAmount);
         } else {
