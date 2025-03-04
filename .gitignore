@@ -10,3 +10,4 @@ coverage
 coverage.json
 test.json
 .idea
+flatten
